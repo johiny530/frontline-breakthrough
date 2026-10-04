@@ -105,7 +105,7 @@ export class Stage {
     // Advance unless a boss blocks the way.
     const bossBlocking = this.boss !== null && this.boss.alive;
     if (!bossBlocking) {
-      this.progress = Math.min(this.def.length, this.progress + CONFIG.squad.forwardSpeed * dt);
+      this.progress = Math.min(this.def.length, this.progress + CONFIG.squad.forwardSpeed * (this.def.speed ?? 1) * dt);
     }
     squad.z = -this.progress;
     squad.update(dt);

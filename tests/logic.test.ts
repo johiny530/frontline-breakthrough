@@ -99,6 +99,13 @@ describe('endless generator', () => {
     }
   });
 
+  it('speeds up sector by sector, up to a cap', () => {
+    const speeds = [1, 5, 10, 40].map((n) => generateSector(n, 1, 50).speed!);
+    expect(speeds[1]).toBeGreaterThan(speeds[0]);
+    expect(speeds[0]).toBeGreaterThan(1);
+    expect(speeds[3]).toBeCloseTo(1.8);
+  });
+
   it('scales the threat with the army entering the sector', () => {
     const hp = (def: LevelDef) => def.items.reduce((a, it) => a + (it.kind === 'enemies' ? it.count * it.hp : 0), 0);
     expect(hp(generateSector(4, 7, 1000))).toBeGreaterThan(hp(generateSector(4, 7, 100)) * 5);

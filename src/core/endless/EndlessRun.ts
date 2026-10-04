@@ -58,7 +58,7 @@ export class EndlessRun {
   get medals(): number {
     return this.sectorsCleared * ENDLESS.medalsPerSector
       + this.bossesKilled * ENDLESS.medalsPerBoss
-      + Math.floor(this.score / 500) * ENDLESS.medalsPer500;
+      + Math.floor(Math.sqrt(this.score) / ENDLESS.scoreMedalDiv);
   }
 
   level(perk: PerkDef): number {

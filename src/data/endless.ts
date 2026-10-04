@@ -81,19 +81,25 @@ export function metaStart(levels: Record<string, number>): { mods: RunMods; star
 /** Difficulty curve for generated sectors (n = 1, 2, 3, ...). */
 export const ENDLESS = {
   startCount: 12,
-  sectorLength: 130,
+  sectorLength: 150,
+  // Pace: forward speed multiplier speedBase + speedGrowth * n, capped; gap between road events.
+  speedBase: 1.35,
+  speedGrowth: 0.03,
+  speedMax: 1.8,
+  beatSpacing: 13,
   bossEvery: 5,
   crateChance: 0.45, // chance a sector contains a supply crate
-  // Medals earned per run: per sector cleared, per boss, and per 500 points.
-  medalsPerSector: 2,
+  // Medals earned per run: per sector cleared, per boss, plus sqrt(score) / scoreMedalDiv
+  // (square root, because scores balloon with the army size).
+  medalsPerSector: 3,
   medalsPerBoss: 5,
-  medalsPer500: 1,
+  scoreMedalDiv: 8,
   sectorBonus: 100, // score per cleared sector
   // Threat follows the army (A = soldiers entering the sector):
   // total enemy hp of one wave = A * pressure(n), pressure(n) = pressureBase * pressureGrowth^n.
   // Geometric, because stacked perks multiply the army's firepower too.
-  pressureBase: 3,
-  pressureGrowth: 1.15,
+  pressureBase: 1.2,
+  pressureGrowth: 1.25,
   minArmy: 12, // A never counts below this, so tiny armies still meet enemies
   waveBodies: [30, 90] as const, // zombies per wave stay in this range; hp grows instead
   barrelHp: 0.5, // x A

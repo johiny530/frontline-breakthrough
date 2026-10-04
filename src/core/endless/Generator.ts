@@ -79,7 +79,7 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
   const middle = ['wave', 'barrels', 'flankWaves', 'barrelAndGate', 'heavyWave', 'riskyGates', 'wave'];
   if (n >= 3) middle.push('runnerRush');
   if (n >= 6) middle.push('bruteSquad', 'runnerRush');
-  const spacing = 17;
+  const spacing = E.beatSpacing;
   while (at + spacing < length - 14) {
     at += spacing + between(-2, 2);
     beats[pick(middle)](at);
@@ -95,6 +95,7 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
   return {
     name: isBoss ? `第 ${n} 段・Boss` : `第 ${n} 段`,
     length,
+    speed: Math.min(E.speedMax, E.speedBase + E.speedGrowth * n),
     startSoldiers,
     items: items.sort((a, b) => a.at - b.at),
     boss: isBoss

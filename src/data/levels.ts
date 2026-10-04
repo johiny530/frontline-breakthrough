@@ -47,6 +47,7 @@ export interface LevelDef {
   startSoldiers: number;
   items: ItemDef[];
   boss?: BossDef;
+  speed?: number; // forward speed multiplier (default 1)
 }
 
 // Small builders to keep the tables short.
