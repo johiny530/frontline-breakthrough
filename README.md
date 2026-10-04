@@ -1,5 +1,7 @@
 # Frontline Breakthrough
 
+**▶ Play in the browser: https://johiny530.github.io/frontline-breakthrough/** (desktop or phone)
+
 A 3D lane-runner shooter in the style of the *Last War: Survival* mini-game:
 steer a squad left and right, shoot gates to raise their numbers, break barrels
 to free soldiers, and push through zombie waves. Five campaign stages plus an
