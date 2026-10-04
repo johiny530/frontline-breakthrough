@@ -32,6 +32,9 @@ export class SharedView {
   readonly gateBlue = new THREE.MeshStandardMaterial({ color: 0x3f8cff, emissive: 0x1c4bb0, transparent: true, opacity: 0.7 });
   readonly gateRed = new THREE.MeshStandardMaterial({ color: 0xff4b4b, emissive: 0x9a1515, transparent: true, opacity: 0.7 });
   readonly postMat = new THREE.MeshStandardMaterial({ color: 0xdfe6ee, metalness: 0.3, roughness: 0.5 });
+  readonly spikeGeo = new THREE.ConeGeometry(0.11, 0.5, 6);
+  readonly spikeMat = new THREE.MeshStandardMaterial({ color: 0xb9c0c6, metalness: 0.8, roughness: 0.3 });
+  readonly hazardMat = new THREE.MeshLambertMaterial({ map: hazardTexture() });
 
   constructor(readonly assets: Assets, world: World) {
     const R = CONFIG.render;
@@ -123,6 +126,27 @@ export function warmUp(shared: SharedView, world: World): void {
   view.dispose();
 }
 
+/** Yellow/black diagonal stripes for spike plates. */
+function hazardTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#17190f';
+  ctx.fillRect(0, 0, 64, 64);
+  ctx.fillStyle = '#f3a712';
+  for (let i = -64; i < 128; i += 32) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0); ctx.lineTo(i + 16, 0); ctx.lineTo(i + 80, 64); ctx.lineTo(i + 64, 64);
+    ctx.closePath();
+    ctx.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 interface GateView { group: THREE.Group; panel: THREE.Mesh; label: TextSprite }
 interface BarrelView { group: THREE.Object3D; label: TextSprite }
 
@@ -131,6 +155,8 @@ export class StageView {
   private root = new THREE.Group();
   private gates: GateView[] = [];
   private barrels: BarrelView[] = [];
+  private hazards: THREE.Group[] = [];
+  private ownGeos: THREE.BufferGeometry[] = [];
   private squadLabel = new TextSprite(0.8, true);
   private bossLabel = new TextSprite(0.9);
   private labels: TextSprite[] = [];
@@ -148,6 +174,7 @@ export class StageView {
 
     for (const g of stage.gates) this.gates.push(this.makeGate(g.x, g.z));
     for (const b of stage.barrels) this.barrels.push(this.makeBarrel(b.x, b.z, b.crate));
+    for (const h of stage.hazards) this.hazards.push(this.makeHazard(h.x, h.z, h.halfWidth, h.halfDepth));
     this.root.add(this.squadLabel.sprite, this.bossLabel.sprite);
     this.labels.push(this.squadLabel, this.bossLabel);
     this.bossLabel.sprite.visible = false;
@@ -175,6 +202,29 @@ export class StageView {
     group.position.set(x, 0, z);
     this.root.add(group);
     return { group, panel, label };
+  }
+
+  private makeHazard(x: number, z: number, halfW: number, halfD: number): THREE.Group {
+    const s = this.shared;
+    const group = new THREE.Group();
+    const plateGeo = new THREE.BoxGeometry(halfW * 2, 0.12, halfD * 2);
+    // Stripe density follows the plate size.
+    const uv = plateGeo.getAttribute('uv') as THREE.BufferAttribute;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * halfW, uv.getY(i) * halfD);
+    this.ownGeos.push(plateGeo);
+    const plate = new THREE.Mesh(plateGeo, s.hazardMat);
+    plate.position.y = 0.06;
+    group.add(plate);
+    for (let px = -halfW + 0.2; px <= halfW - 0.15; px += 0.38) {
+      for (const pz of [-halfD * 0.45, halfD * 0.45]) {
+        const spike = new THREE.Mesh(s.spikeGeo, s.spikeMat);
+        spike.position.set(px + (pz > 0 ? 0.19 : 0), 0.37, pz);
+        group.add(spike);
+      }
+    }
+    group.position.set(x, 0, z);
+    this.root.add(group);
+    return group;
   }
 
   private makeBarrel(x: number, z: number, crate: boolean): BarrelView {
@@ -248,12 +298,13 @@ export class StageView {
       const v = this.gates[i];
       v.group.visible = !g.used && near(g.z);
       if (!v.group.visible) return;
-      const val = g.display;
-      v.label.set(val >= 0 ? `+${val}` : `${val}`);
-      v.panel.material = val >= 0 ? s.gateBlue : s.gateRed;
+      v.label.set(g.label);
+      v.panel.material = g.good ? s.gateBlue : s.gateRed;
       const pulse = st.time - g.hitTime < 0.08 ? 1.06 : 1;
       v.panel.scale.set(pulse, pulse, 1);
     });
+
+    st.hazards.forEach((h, i) => { this.hazards[i].visible = near(h.z); });
 
     // Barrels with captives standing on top.
     s.captives.begin();
@@ -382,6 +433,7 @@ export class StageView {
 
   dispose(): void {
     this.world.scene.remove(this.root);
+    for (const g of this.ownGeos) g.dispose();
     for (const l of this.labels) l.dispose();
     const s = this.shared;
     for (const c of [...s.ranks, s.zombies, s.runners, s.brutes, s.boss, s.captives]) { c.begin(); c.update(0); }

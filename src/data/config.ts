@@ -53,6 +53,12 @@ export const CONFIG = {
     radius: 0.7,
     height: 1.3,
     ramTick: 0.1, // seconds between losses while soldiers push into a barrel
+    ramShare: 0.15, // share of a touching unit's soldiers lost per tick
+  },
+  hazard: {
+    halfDepth: 0.5,
+    tick: 0.1, // seconds between losses while units stand on spikes
+    share: 0.3, // share of a touching unit's soldiers lost per tick
   },
   boss: {
     radius: 1.1,

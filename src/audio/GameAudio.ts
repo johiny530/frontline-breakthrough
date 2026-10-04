@@ -49,7 +49,7 @@ export class GameAudio {
         case 'shots': shots += ev.count; break;
         case 'kill': kills++; break;
         case 'soldiersLost': lost += ev.count; break;
-        case 'gateHit': this.sfx.play('gateHit', 1, Math.max(0, Math.min(12, Math.floor(ev.gate.value / 3)))); break;
+        case 'gateHit': this.sfx.play('gateHit', 1, Math.max(0, Math.min(12, Math.floor(ev.gate.op === 'mul' ? (ev.gate.value - 0.5) * 8 : ev.gate.value / 3)))); break;
         case 'gatePass':
           if (ev.delta > 0) this.sfx.play('gateGood');
           else if (ev.delta < 0) this.sfx.play('gateBad');

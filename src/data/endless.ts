@@ -98,15 +98,15 @@ export const ENDLESS = {
   // Threat follows the army (A = soldiers entering the sector):
   // total enemy hp of one wave = A * pressure(n), pressure(n) = pressureBase * pressureGrowth^n.
   // Geometric, because stacked perks multiply the army's firepower too.
-  pressureBase: 1.2,
+  pressureBase: 3,
   pressureGrowth: 1.25,
   minArmy: 12, // A never counts below this, so tiny armies still meet enemies
   waveBodies: [30, 90] as const, // zombies per wave stay in this range; hp grows instead
   barrelHp: 0.5, // x A
   barrelReward: 0.08, // x A
-  gateGood: 0.05, // x A
-  gateBad: 0.15, // x A
-  gateMax: 0.12, // x A
+  gateGood: 0.25, // x A
+  gateBad: 0.3, // x A
+  gateMax: 0.6, // x A
   crateHp: 0.8, // x A
   bossHp: 20, // x A, +25% per boss tier
   bossDps: 0.04, // x A soldiers per second on contact

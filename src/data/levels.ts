@@ -10,6 +10,7 @@ export interface GateDef {
   value: number; // soldiers added when passing (negative removes)
   perHit: number; // value gained per bullet hit
   max: number;
+  op?: 'add' | 'mul'; // mul: value is a multiplier (default add)
 }
 
 export interface BarrelDef {
@@ -33,7 +34,14 @@ export interface EnemyGroupDef {
   spread: number; // half width of the group
 }
 
-export type ItemDef = GateDef | BarrelDef | EnemyGroupDef;
+export interface HazardDef {
+  kind: 'hazard';
+  at: number;
+  x: number;
+  halfWidth: number; // across the road
+}
+
+export type ItemDef = GateDef | BarrelDef | EnemyGroupDef | HazardDef;
 
 export interface BossDef {
   hp: number;

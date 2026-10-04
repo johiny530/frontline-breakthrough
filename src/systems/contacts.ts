@@ -33,9 +33,9 @@ export function updateContacts(st: Stage, dt: number): void {
     st.events.push({ type: 'blood', x: e.x, z: e.z });
   }
 
-  // Units pushing into a barrel lose soldiers every tick, each chipping off its hp.
-  // A big unit only loses its front rank (~sqrt of its size) per tick.
-  const frontRank = (tier: number) => Math.ceil(Math.sqrt(tierValue(tier)));
+  // Units pushing into a barrel lose a share of their soldiers every tick, each
+  // chipping off its hp, so ramming hurts big armies as much as small ones.
+  const frontRank = (tier: number) => Math.max(1, Math.ceil(tierValue(tier) * CONFIG.barrel.ramShare));
   for (const b of st.barrels) {
     if (!b.alive) continue;
     b.ramTimer -= dt;
@@ -55,11 +55,31 @@ export function updateContacts(st: Stage, dt: number): void {
     }
   }
 
+  // Spikes: every unit standing on them loses a share of its soldiers each tick.
+  for (const h of st.hazards) {
+    if (Math.abs(h.z - squad.z) > reach + h.halfDepth) continue;
+    h.tickTimer -= dt;
+    if (h.tickTimer > 0) continue;
+    let loss = 0;
+    for (const u of squad.units) {
+      const r = tierRadius(u.tier);
+      if (Math.abs(squad.x + u.ox - h.x) < h.halfWidth + r && Math.abs(squad.z + u.oz - h.z) < h.halfDepth + r) {
+        loss += Math.max(1, Math.ceil(tierValue(u.tier) * CONFIG.hazard.share));
+      }
+    }
+    if (loss === 0) continue;
+    h.tickTimer = CONFIG.hazard.tick;
+    loss = Math.min(loss, squad.count);
+    squad.remove(loss);
+    st.events.push({ type: 'soldiersLost', count: loss });
+    st.events.push({ type: 'blood', x: squad.x, z: h.z });
+  }
+
   for (const g of st.gates) {
     if (g.used || squad.z > g.z) continue;
     g.used = true;
     if (Math.abs(squad.x - g.x) >= g.halfWidth) continue;
-    const delta = g.display;
+    const delta = g.gain(squad.count);
     if (delta > 0) squad.add(delta, g.x, g.z);
     else squad.remove(-delta);
     st.events.push({ type: 'gatePass', gate: g, delta });

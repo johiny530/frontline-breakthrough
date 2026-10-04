@@ -4,6 +4,7 @@ import { Barrel } from '../entities/Barrel';
 import { Bullets } from '../entities/Bullets';
 import { Enemy } from '../entities/Enemy';
 import { Gate } from '../entities/Gate';
+import { Hazard } from '../entities/Hazard';
 import { Squad } from '../entities/Squad';
 import { mulberry32 } from './math';
 import { IDENTITY_MODS, type RunMods } from '../data/endless';
@@ -43,6 +44,7 @@ export class Stage {
   readonly gates: Gate[] = [];
   readonly barrels: Barrel[] = [];
   readonly enemies: Enemy[] = [];
+  readonly hazards: Hazard[] = [];
   readonly bullets = new Bullets();
   readonly events: StageEvent[] = [];
   readonly score: ScoreSheet = { kills: 0, barrelPoints: 0, survivorBonus: 0 };
@@ -64,7 +66,9 @@ export class Stage {
     for (const item of def.items) {
       const z = -item.at;
       if (item.kind === 'gate') {
-        this.gates.push(new Gate(laneX(item.lane, lx), z, gateHalfWidth, item.value, item.perHit, item.max));
+        this.gates.push(new Gate(laneX(item.lane, lx), z, gateHalfWidth, item.value, item.perHit, item.max, item.op));
+      } else if (item.kind === 'hazard') {
+        this.hazards.push(new Hazard(item.x, z, item.halfWidth, CONFIG.hazard.halfDepth));
       } else if (item.kind === 'barrel') {
         this.barrels.push(new Barrel(item.x, z, item.hp, item.reward, item.crate));
       } else {

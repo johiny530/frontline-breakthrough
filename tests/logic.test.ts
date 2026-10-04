@@ -67,6 +67,22 @@ describe('stage rules', () => {
     expect(st.squad.count).toBe(170);
   });
 
+  it('multiplier gates scale the army', () => {
+    const st = new Stage(base([{ kind: 'gate', op: 'mul', at: 15, lane: 'right', value: 2, perHit: 0, max: 2 }], 50), 0);
+    runStage(st, 4);
+    expect(st.squad.count).toBe(100);
+  });
+
+  it('spikes cost soldiers unless the squad steers around them', () => {
+    const spikes: LevelDef['items'] = [{ kind: 'hazard', at: 15, x: -2, halfWidth: 1.9 }];
+    const hit = new Stage(base(spikes, 100), 0);
+    runStage(hit, -4);
+    expect(hit.squad.count).toBeLessThan(60);
+    const dodge = new Stage(base(spikes, 100), 0);
+    runStage(dodge, 4);
+    expect(dodge.squad.count).toBe(100);
+  });
+
   it('passes between two gates without touching either', () => {
     const st = new Stage(base([
       { kind: 'gate', at: 15, lane: 'left', value: -5, perHit: 0, max: 40 },
