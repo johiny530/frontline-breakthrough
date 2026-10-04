@@ -69,13 +69,15 @@ export class Stage {
         this.barrels.push(new Barrel(item.x, z, item.hp, item.reward, item.crate));
       } else {
         // Scatter the group in a loose grid around (x, z).
-        const cols = Math.max(1, Math.round(item.spread * 2 / 0.75));
+        const type = item.type ?? 'walker';
+        const kind = CONFIG.enemyTypes[type];
+        const cols = Math.max(1, Math.round(item.spread * 2 / kind.spacing));
         for (let i = 0; i < item.count; i++) {
           const c = i % cols;
           const r = Math.floor(i / cols);
           const ex = item.x - item.spread + (c + 0.5) * (item.spread * 2 / cols) + (rand() - 0.5) * 0.3;
-          const ez = z - r * 0.75 + (rand() - 0.5) * 0.3;
-          const e = new Enemy(ex, ez, item.hp, CONFIG.enemy.radius);
+          const ez = z - r * kind.spacing + (rand() - 0.5) * 0.3;
+          const e = new Enemy(ex, ez, item.hp, kind.radius, false, type);
           e.laneOffset = ex - item.x;
           this.enemies.push(e);
         }

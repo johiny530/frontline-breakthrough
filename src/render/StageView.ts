@@ -20,6 +20,8 @@ const FLOAT_LIFE = 1.1;
 export class SharedView {
   readonly ranks: CrowdRenderer[]; // one crowd per squad tier
   readonly zombies: CrowdRenderer;
+  readonly runners: CrowdRenderer;
+  readonly brutes: CrowdRenderer;
   readonly boss: CrowdRenderer;
   readonly captives: CrowdRenderer;
   readonly bullets: THREE.InstancedMesh;
@@ -56,6 +58,20 @@ export class SharedView {
       maxCount: R.maxEnemiesRendered,
       variants: 4,
     });
+    this.runners = new CrowdRenderer(assets.zombie, {
+      height: R.enemyHeight * 0.92,
+      clips: [{ name: 'sprint', timeScale: 1.1 }],
+      maxCount: 120,
+      variants: 3,
+      tint: 0xff8a70,
+    });
+    this.brutes = new CrowdRenderer(assets.boss, {
+      height: R.enemyHeight * 1.9,
+      clips: [{ name: 'walk', timeScale: 0.5 }],
+      maxCount: 40,
+      variants: 2,
+      tint: 0xb8c4a0,
+    });
     this.boss = new CrowdRenderer(assets.boss, {
       height: R.bossHeight,
       clips: [{ name: 'walk', timeScale: 0.6 }],
@@ -77,7 +93,7 @@ export class SharedView {
     this.bullets.frustumCulled = false;
     this.bullets.count = 0;
 
-    for (const o of [...this.ranks.map((r) => r.group), this.zombies.group, this.boss.group, this.captives.group, this.bullets, this.effects.group, this.debris.group]) {
+    for (const o of [...this.ranks.map((r) => r.group), this.zombies.group, this.runners.group, this.brutes.group, this.boss.group, this.captives.group, this.bullets, this.effects.group, this.debris.group]) {
       world.scene.add(o);
     }
   }
@@ -92,7 +108,7 @@ export function warmUp(shared: SharedView, world: World): void {
   const st = new Stage(LEVELS[0], 0);
   const view = new StageView(st, shared, world);
   view.sync(0);
-  for (const c of [...shared.ranks, shared.zombies, shared.boss, shared.captives]) {
+  for (const c of [...shared.ranks, shared.zombies, shared.runners, shared.brutes, shared.boss, shared.captives]) {
     c.begin();
     c.add(0, 0, 4);
     c.update(0);
@@ -119,6 +135,7 @@ export class StageView {
   private bossLabel = new TextSprite(0.9);
   private labels: TextSprite[] = [];
   private floaters: { label: TextSprite; life: number }[] = [];
+  private bruteLabels: TextSprite[] = [];
   private tmp = new THREE.Matrix4();
   private scaleTmp = new THREE.Matrix4();
   private barrelScale: THREE.Vector3;
@@ -268,12 +285,14 @@ export class StageView {
     this.squadLabel.sprite.position.set(squad.x, tallest + 0.5, squad.z - squad.radius - 0.4);
 
     // Enemies, including the falling-over death animation.
-    s.zombies.begin();
+    const crowds = { walker: s.zombies, runner: s.runners, brute: s.brutes };
+    for (const c of Object.values(crowds)) c.begin();
     for (const e of st.enemies) {
       if (e.state === 'gone' || !near(e.z)) continue;
-      if (!this.addEnemy(s.zombies, e, 1)) break;
+      this.addEnemy(crowds[e.type], e, 1); // a full crowd just drops the extras
     }
-    s.zombies.update(dt);
+    for (const c of Object.values(crowds)) c.update(dt);
+    this.updateBruteLabels(st.enemies, near);
 
     s.boss.begin();
     const boss = st.boss;
@@ -305,6 +324,26 @@ export class StageView {
     s.effects.update(dt);
     s.debris.update(dt);
     this.world.follow(squad.x, squad.z, squad.radius);
+  }
+
+  /** Hp numbers over brutes, so the player knows what is coming. */
+  private updateBruteLabels(enemies: Enemy[], near: (z: number) => boolean): void {
+    let n = 0;
+    for (const e of enemies) {
+      if (e.type !== 'brute' || !e.alive || !near(e.z)) continue;
+      let label = this.bruteLabels[n];
+      if (!label) {
+        label = new TextSprite(0.6);
+        this.bruteLabels.push(label);
+        this.labels.push(label);
+        this.root.add(label.sprite);
+      }
+      label.set(`${Math.ceil(e.hp)}`, '#ffb4a8');
+      label.sprite.position.set(e.x, CONFIG.render.enemyHeight * 1.9 + 0.4, e.z);
+      label.sprite.visible = true;
+      n++;
+    }
+    for (let i = n; i < this.bruteLabels.length; i++) this.bruteLabels[i].sprite.visible = false;
   }
 
   /** Rising, fading number (gate gains, rescued soldiers). */
@@ -345,7 +384,7 @@ export class StageView {
     this.world.scene.remove(this.root);
     for (const l of this.labels) l.dispose();
     const s = this.shared;
-    for (const c of [...s.ranks, s.zombies, s.boss, s.captives]) { c.begin(); c.update(0); }
+    for (const c of [...s.ranks, s.zombies, s.runners, s.brutes, s.boss, s.captives]) { c.begin(); c.update(0); }
     s.bullets.count = 0;
     s.effects.clear();
     s.debris.clear();

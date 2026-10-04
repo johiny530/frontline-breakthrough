@@ -33,6 +33,13 @@ export const CONFIG = {
     aimCone: 0.45, // soldiers auto-aim at enemies within |dx| < aimCone * distance + aimSlack
     aimSlack: 0.6,
   },
+  // Enemy kinds: speed multiplies walkSpeed; radius is the body size;
+  // spacing is the gap between them in a group.
+  enemyTypes: {
+    walker: { speed: 1, radius: 0.36, spacing: 0.75 },
+    runner: { speed: 2.1, radius: 0.32, spacing: 0.7 },
+    brute: { speed: 0.6, radius: 0.62, spacing: 1.4 },
+  },
   enemy: {
     radius: 0.36,
     walkSpeed: 2.2,

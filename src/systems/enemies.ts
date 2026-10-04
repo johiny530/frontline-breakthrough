@@ -19,7 +19,7 @@ export function updateEnemies(st: Stage, dt: number): void {
     const ahead = squad.z - e.z;
     if (e.state === 'idle' && ahead < cfg.activateDist) e.state = 'walking';
     if (e.state !== 'walking') continue;
-    e.z += cfg.walkSpeed * dt;
+    e.z += cfg.walkSpeed * CONFIG.enemyTypes[e.type].speed * dt;
     // Chase the squad but keep the group's spread, so enemies don't pile into one column.
     const edge = CONFIG.track.halfWidth - e.radius;
     const target = clamp(squad.x + e.laneOffset * cfg.chaseSpread, -edge, edge);

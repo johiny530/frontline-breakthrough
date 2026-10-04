@@ -20,6 +20,7 @@ export interface CrowdOptions {
   variants?: number; // animation phase variants, to avoid perfect sync
   facing?: number; // yaw applied to the model (radians)
   attach?: CrowdAttachment;
+  tint?: number; // multiplies the material color, e.g. to make a variant
 }
 
 interface Template {
@@ -79,7 +80,12 @@ export class CrowdRenderer {
     }
 
     for (const part of this.templates[0].parts) {
-      const im = new THREE.InstancedMesh(part.geometry, part.material, opts.maxCount);
+      let material = part.material as THREE.MeshStandardMaterial;
+      if (opts.tint !== undefined) {
+        material = material.clone();
+        material.color.multiply(new THREE.Color(opts.tint));
+      }
+      const im = new THREE.InstancedMesh(part.geometry, material, opts.maxCount);
       im.count = 0;
       im.frustumCulled = false; // instances span the whole track
       im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);

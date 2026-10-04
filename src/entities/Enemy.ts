@@ -1,3 +1,5 @@
+import type { EnemyType } from '../data/levels';
+
 export type EnemyState = 'idle' | 'walking' | 'dying' | 'gone';
 
 export class Enemy {
@@ -12,6 +14,7 @@ export class Enemy {
     public maxHp: number,
     public radius: number,
     public isBoss = false,
+    public type: EnemyType = 'walker',
   ) {
     this.hp = maxHp;
   }

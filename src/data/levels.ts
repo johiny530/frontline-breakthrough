@@ -21,8 +21,11 @@ export interface BarrelDef {
   crate?: boolean; // supply crate (endless mode): grants a random perk instead
 }
 
+export type EnemyType = 'walker' | 'runner' | 'brute';
+
 export interface EnemyGroupDef {
   kind: 'enemies';
+  type?: EnemyType; // default walker
   at: number;
   x: number;
   count: number;

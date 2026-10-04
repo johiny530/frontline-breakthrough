@@ -1,5 +1,5 @@
 import { ENDLESS } from '../../data/endless';
-import type { ItemDef, Lane, LevelDef } from '../../data/levels';
+import type { EnemyType, ItemDef, Lane, LevelDef } from '../../data/levels';
 import { clamp, mulberry32 } from '../math';
 
 /**
@@ -23,11 +23,12 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
   const [minBodies, maxBodies] = E.waveBodies;
 
   /** A wave worth `scale` of the standard threat, as bodies x hp. */
-  const wave = (at: number, x: number, scale: number, spread: number, toughness = 1): ItemDef => {
+  const wave = (at: number, x: number, scale: number, spread: number, toughness = 1, type: EnemyType = 'walker'): ItemDef => {
     const totalHp = A * pressure * scale * between(0.85, 1.15);
-    const bodies = Math.round(clamp((20 + 6 * n) * scale / toughness, minBodies * scale, maxBodies * scale));
+    const lo = type === 'brute' ? 3 : minBodies * scale;
+    const bodies = Math.round(clamp((20 + 6 * n) * scale / toughness, lo, maxBodies * scale));
     const hp = Math.max(1, Math.ceil(totalHp / Math.max(1, bodies)));
-    return { kind: 'enemies', at, x, count: Math.max(4, Math.min(bodies, Math.ceil(totalHp))), hp, spread };
+    return { kind: 'enemies', type, at, x, count: Math.max(type === 'brute' ? 2 : 4, Math.min(bodies, Math.ceil(totalHp))), hp, spread };
   };
   const gateMax = Math.round(A * E.gateMax + 20);
   const perHit = gateMax / 60;
@@ -56,6 +57,10 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
     wave(at) { items.push(wave(at, 0, 1, 3.2)); },
     flankWaves(at) { for (const x of [-2, 2]) items.push(wave(at, x, 0.55, 1.6)); },
     heavyWave(at) { items.push(wave(at, 0, 0.8, 3.2, 2.5)); },
+    // Fast, fragile zombies that close the distance before you can thin them out.
+    runnerRush(at) { items.push(wave(at, (rand() - 0.5) * 2, 0.6, 2.4, 0.8, 'runner')); },
+    // A few slow, very tough brutes: each one that connects costs a lot.
+    bruteSquad(at) { items.push(wave(at, 0, 0.5, 2.6, 8, 'brute')); },
     barrels(at) {
       const l = side();
       items.push({ kind: 'barrel', at, x: lx(l), hp: barrelHp(1), reward: reward(1) });
@@ -72,6 +77,8 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
   let at = 16;
   beats.gateChoice(at);
   const middle = ['wave', 'barrels', 'flankWaves', 'barrelAndGate', 'heavyWave', 'riskyGates', 'wave'];
+  if (n >= 3) middle.push('runnerRush');
+  if (n >= 6) middle.push('bruteSquad', 'runnerRush');
   const spacing = 17;
   while (at + spacing < length - 14) {
     at += spacing + between(-2, 2);
