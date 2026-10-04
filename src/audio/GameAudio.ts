@@ -27,6 +27,10 @@ export class GameAudio {
     this.engine.setMusicLevel(paused ? 0.35 : 1);
   }
 
+  perk(): void {
+    this.sfx.play('perk');
+  }
+
   click(): void {
     this.sfx.play('click');
   }

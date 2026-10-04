@@ -8,7 +8,7 @@ export type SfxName =
   | 'shot' | 'kill' | 'gateHit' | 'gateGood' | 'gateBad'
   | 'barrelHit' | 'barrelBreak' | 'soldierLost'
   | 'bossSpawn' | 'bossHit' | 'bossDeath'
-  | 'win' | 'lose' | 'click';
+  | 'win' | 'lose' | 'click' | 'perk';
 
 type SfxFn = (eng: AudioEngine, out: AudioNode, t: number, intensity: number, pitch: number) => void;
 
@@ -74,6 +74,12 @@ const SFX: Record<SfxName, SfxFn> = {
     [64, 63, 62, 61].forEach((m, i) =>
       tone(e, out, t + i * 0.28, { freq: midiToHz(m), type: 'sawtooth', dur: i === 3 ? 0.9 : 0.3, vol: 0.12 }));
     tone(e, out, t + 0.84, { freq: midiToHz(37), type: 'triangle', dur: 1.0, vol: 0.25 });
+  },
+  perk(e, out, t) {
+    // Bright rising sparkle: a power-up.
+    [76, 79, 83, 88, 91].forEach((m, i) =>
+      tone(e, out, t + i * 0.045, { freq: midiToHz(m), type: 'triangle', dur: 0.25, vol: 0.16 }));
+    tone(e, out, t, { freq: midiToHz(64), freqEnd: midiToHz(76), type: 'square', dur: 0.3, vol: 0.08 });
   },
   click(e, out, t) {
     tone(e, out, t, { freq: 880, freqEnd: 1320, type: 'square', dur: 0.06, vol: 0.2 });

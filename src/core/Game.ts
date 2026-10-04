@@ -46,6 +46,10 @@ export class Game {
       this.onAction(a, arg);
     });
     this.makeSoundToggle(ui);
+    // Leaving the tab pauses the game, so returning doesn't drop you mid-fight.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.mode === 'playing' && !DEBUG.bot) this.togglePause();
+    });
   }
 
   private makeSoundToggle(ui: HTMLElement): void {
@@ -156,6 +160,7 @@ export class Game {
       const { perk, added } = this.run!.takeRandom(st.squad.count);
       st.squad.add(added, ev.barrel.x, ev.barrel.z);
       this.hud.toast(`<small>補給箱</small>${perk.name}<em>${perk.desc}</em>`);
+      this.audio.perk();
     }
   }
 
@@ -202,18 +207,32 @@ export class Game {
       this.showPerks();
       return;
     }
-    // The run is over: pay out medals and keep records (bot runs are tests).
+    const { earned, record } = this.settleRun(run);
+    this.audio.result(false);
+    this.screens.runOver(run, earned, record);
+  }
+
+  /** Pays out medals and keeps records once per run (bot runs are tests). */
+  private settleRun(run: EndlessRun): { earned: number; record: boolean } {
     const earned = run.medals;
     const rec = this.save.endless;
     const record = run.sectorsCleared > rec.sector || run.score > rec.score;
-    if (!this.bot) {
+    if (!run.settled && !this.bot) {
       this.save.medals += earned;
       rec.sector = Math.max(rec.sector, run.sectorsCleared);
       rec.score = Math.max(rec.score, run.score);
       writeSave(this.save);
     }
-    this.audio.result(false);
-    this.screens.runOver(run, earned, record);
+    run.settled = true;
+    return { earned, record };
+  }
+
+  /** Leaving a run from the pause menu still pays for the progress made. */
+  private abandonRun(): void {
+    const run = this.run;
+    if (!run || run.settled) return;
+    if (this.mode === 'paused' && this.stage?.status === 'playing') run.finishSector(this.stage);
+    this.settleRun(run);
   }
 
   private showPerks(): void {
@@ -275,15 +294,16 @@ export class Game {
     switch (action) {
       case 'play': this.play(arg); break;
       case 'retry':
-        if (this.run) this.startEndless();
+        if (this.run) { this.abandonRun(); this.startEndless(); }
         else if (this.stage) this.play(this.stage.index);
         break;
       case 'endless': this.startEndless(); break;
-      case 'shop': this.showShop(); break;
+      case 'shop': this.abandonRun(); this.showShop(); break;
       case 'buy': this.buy(arg); break;
       case 'perk': {
         const run = this.run!;
         run.take(this.offer[arg]);
+        this.audio.perk();
         run.pendingPicks--;
         if (run.pendingPicks > 0) this.showPerks();
         else this.startSector();
@@ -295,7 +315,7 @@ export class Game {
           this.showPerks();
         }
         break;
-      case 'menu': this.showMenu(); break;
+      case 'menu': this.abandonRun(); this.showMenu(); break;
       case 'resume':
         this.mode = 'playing';
         this.screens.hide();

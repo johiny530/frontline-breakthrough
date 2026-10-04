@@ -135,7 +135,7 @@ export const LEVELS: LevelDef[] = [
       enemies(166, 0, 120, 2),
       barrel(184, -2, 180, 50), barrel(184, 2, 180, 50),
     ],
-    boss: { hp: 9000, speed: 1, contactDps: 15 },
+    boss: { hp: 15000, speed: 1, contactDps: 15 },
   },
 ];
 

@@ -19,6 +19,8 @@ export class EndlessRun {
   bossesKilled = 0;
   /** Perk choices owed to the player (1 per sector, 2 after a boss). */
   pendingPicks = 0;
+  /** Medals already paid out (run over or abandoned). */
+  settled = false;
   private rand: () => number;
 
   constructor(metaLevels: Record<string, number>, readonly seed = Math.floor(Math.random() * 1e9)) {
