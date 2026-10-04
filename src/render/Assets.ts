@@ -31,7 +31,14 @@ function createLoader(): GLTFLoader {
     const i = url.indexOf('assets/kenney/');
     return i >= 0 ? inline[url.slice(i + 'assets/kenney/'.length)] ?? url : url;
   });
-  return new GLTFLoader(manager);
+  const loader = new GLTFLoader(manager);
+  // The default ImageBitmapLoader fetch()es textures, which sandboxed hosts may
+  // block; TextureLoader uses an <img> element, which accepts data: URIs.
+  loader.register((parser) => {
+    (parser as unknown as { textureLoader: THREE.Loader }).textureLoader = new THREE.TextureLoader(manager);
+    return { name: 'fb_img_textures' };
+  });
+  return loader;
 }
 
 /** Inline builds parse the decoded bytes directly instead of fetching. */

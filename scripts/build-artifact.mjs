@@ -1,12 +1,11 @@
 // Packs dist/ into dist-artifact/index.html: one HTML body fragment (the artifact
 // host adds the document skeleton) with CSS, JS, models and textures all inlined,
 // since artifacts cannot serve .glb files.
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { extname, join, relative, sep } from 'node:path';
 
 const dist = 'dist';
 const out = 'dist-artifact';
-rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 
 const files = readdirSync(`${dist}/assets`);
