@@ -12,16 +12,23 @@ export const CONFIG = {
     steerSpeed: 9, // keyboard steering, units/s
     dragGain: 1.3, // drag distance multiplier (pointer)
     followRate: 14, // how fast the squad center chases its target x
-    spacing: 0.36, // formation spacing between soldiers
-    maxDisplayed: 150, // soldiers rendered; the real count can be larger
-    soldierRadius: 0.26,
-    slotFollowRate: 6, // how fast soldiers move to their formation slots
+    // Rank system: every 10 units of one tier merge into one unit of the next.
+    // The last tier never merges. radius is the collision/packing radius.
+    tiers: [
+      { value: 1, radius: 0.22, height: 1.05 },
+      { value: 10, radius: 0.3, height: 1.45 },
+      { value: 100, radius: 0.4, height: 1.9 },
+      { value: 1000, radius: 0.5, height: 2.4 },
+    ],
+    packing: 1.5, // formation area per unit, relative to (2 * radius)^2
+    slotFollowRate: 6, // how fast units move to their formation slots
   },
   fire: {
-    interval: 0.6, // seconds between shots per displayed soldier
+    interval: 0.6, // seconds between shots per unit
     bulletSpeed: 30,
     range: 16,
-    damage: 1, // per bullet, multiplied by count / displayed
+    damage: 1, // per bullet per soldier: a unit worth 10 fires 10-damage bullets
+    // Bullets pierce: damage left over after killing a target carries on.
     aimCone: 0.45, // soldiers auto-aim at enemies within |dx| < aimCone * distance + aimSlack
     aimSlack: 0.6,
   },

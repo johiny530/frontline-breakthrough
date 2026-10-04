@@ -15,7 +15,7 @@ const VIEW_BEHIND = 8;
 
 /** Renderers that live for the whole session and are reused by every stage. */
 export class SharedView {
-  readonly soldiers: CrowdRenderer;
+  readonly ranks: CrowdRenderer[]; // one crowd per squad tier
   readonly zombies: CrowdRenderer;
   readonly boss: CrowdRenderer;
   readonly captives: CrowdRenderer;
@@ -36,13 +36,16 @@ export class SharedView {
     rifle.rotation.set(Math.PI / 2, 0, 0);
 
     const legsOnly = (t: string) => t.startsWith('leg-');
-    this.soldiers = new CrowdRenderer(assets.soldier, {
-      height: R.soldierHeight,
+    const rankModels = [assets.soldier, assets.officer, assets.elite, assets.mech];
+    const tiers = CONFIG.squad.tiers;
+    this.ranks = tiers.map((tier, i) => new CrowdRenderer(rankModels[i], {
+      height: tier.height,
       clips: [{ name: 'holding-both-shoot' }, { name: 'walk', filter: legsOnly, timeScale: 1.4 }],
-      maxCount: CONFIG.squad.maxDisplayed,
+      maxCount: i === tiers.length - 1 ? 60 : 9, // lower ranks merge at 10
+      variants: 2,
       facing: Math.PI,
       attach: { node: 'arm-right', object: rifle },
-    });
+    }));
     this.zombies = new CrowdRenderer(assets.zombie, {
       height: R.enemyHeight,
       clips: [{ name: 'walk', timeScale: 0.8 }],
@@ -70,7 +73,7 @@ export class SharedView {
     this.bullets.frustumCulled = false;
     this.bullets.count = 0;
 
-    for (const o of [this.soldiers.group, this.zombies.group, this.boss.group, this.captives.group, this.bullets, this.effects.group]) {
+    for (const o of [...this.ranks.map((r) => r.group), this.zombies.group, this.boss.group, this.captives.group, this.bullets, this.effects.group]) {
       world.scene.add(o);
     }
   }
@@ -88,6 +91,7 @@ export class StageView {
   private bossLabel = new TextSprite(0.9);
   private labels: TextSprite[] = [];
   private tmp = new THREE.Matrix4();
+  private scaleTmp = new THREE.Matrix4();
   private barrelScale: THREE.Vector3;
 
   constructor(private stage: Stage, private shared: SharedView, private world: World) {
@@ -184,11 +188,15 @@ export class StageView {
     s.captives.update(dt);
 
     // Squad.
-    s.soldiers.begin();
-    for (const sol of squad.soldiers) s.soldiers.add(squad.x + sol.ox, 0, squad.z + sol.oz);
-    s.soldiers.update(dt);
+    for (const r of s.ranks) r.begin();
+    let tallest = 0;
+    for (const u of squad.units) {
+      s.ranks[u.tier].add(squad.x + u.ox, 0, squad.z + u.oz);
+      tallest = Math.max(tallest, CONFIG.squad.tiers[u.tier].height);
+    }
+    for (const r of s.ranks) r.update(dt);
     this.squadLabel.set(`${squad.count}`, '#d6ecff');
-    this.squadLabel.sprite.position.set(squad.x, 1.5, squad.z - squad.radius - 0.4);
+    this.squadLabel.sprite.position.set(squad.x, tallest + 0.5, squad.z - squad.radius - 0.4);
 
     // Enemies, including the falling-over death animation.
     s.zombies.begin();
@@ -215,7 +223,10 @@ export class StageView {
     const n = Math.min(list.length, MAX_BULLETS);
     for (let i = 0; i < n; i++) {
       const b = list[i];
+      // Heavier (higher-rank) bullets are drawn thicker.
+      const k = 1 + 0.6 * Math.log10(Math.max(1, b.damage));
       this.tmp.makeRotationY(Math.atan2(b.vx, b.vz));
+      this.tmp.multiply(this.scaleTmp.makeScale(k, k, 1));
       this.tmp.setPosition(b.x, BULLET_Y, b.z);
       s.bullets.setMatrixAt(i, this.tmp);
     }
@@ -239,7 +250,7 @@ export class StageView {
     this.world.scene.remove(this.root);
     for (const l of this.labels) l.dispose();
     const s = this.shared;
-    for (const c of [s.soldiers, s.zombies, s.boss, s.captives]) { c.begin(); c.update(0); }
+    for (const c of [...s.ranks, s.zombies, s.boss, s.captives]) { c.begin(); c.update(0); }
     s.bullets.count = 0;
     s.effects.clear();
   }

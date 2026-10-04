@@ -4,7 +4,10 @@ import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 const BASE = `${import.meta.env.BASE_URL}assets/kenney/`;
 
 const MODEL_PATHS = {
-  soldier: 'blocky/character-m.glb',
+  soldier: 'blocky/character-m.glb', // rank 1
+  officer: 'blocky/character-j.glb', // rank 10
+  elite: 'blocky/character-r.glb', // rank 100
+  mech: 'blocky/character-g.glb', // rank 1000
   zombie: 'blocky/character-l.glb',
   boss: 'blocky/character-o.glb',
   rifle: 'blaster/blaster-d.glb',

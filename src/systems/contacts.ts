@@ -1,27 +1,28 @@
 import { CONFIG } from '../data/config';
 import type { Stage } from '../core/Stage';
+import { tierRadius, tierValue } from '../entities/Squad';
 
 /** Squad touching enemies, barrels, the boss, and passing through gates. */
 export function updateContacts(st: Stage, dt: number): void {
   const squad = st.squad;
-  const sr = CONFIG.squad.soldierRadius;
   const reach = squad.radius + 1.5;
 
-  // Number of displayed soldiers within r of (x, z).
-  const countTouching = (x: number, z: number, r: number): number => {
+  // Sum of `weight(tier)` over units whose body touches a circle of radius r at (x, z).
+  const touching = (x: number, z: number, r: number, weight: (tier: number) => number): number => {
     if (Math.abs(z - squad.z) > reach + r) return 0;
-    const rr = (r + sr) * (r + sr);
-    let n = 0;
-    for (const s of squad.soldiers) {
-      const dx = squad.x + s.ox - x;
-      const dz = squad.z + s.oz - z;
-      if (dx * dx + dz * dz < rr) n++;
+    let sum = 0;
+    for (const u of squad.units) {
+      const rr = r + tierRadius(u.tier);
+      const dx = squad.x + u.ox - x;
+      const dz = squad.z + u.oz - z;
+      if (dx * dx + dz * dz < rr * rr) sum += weight(u.tier);
     }
-    return n;
+    return sum;
   };
+  const one = () => 1;
 
   for (const e of st.enemies) {
-    if (e.state !== 'walking' || countTouching(e.x, e.z, e.radius) === 0) continue;
+    if (e.state !== 'walking' || touching(e.x, e.z, e.radius, one) === 0) continue;
     const lost = Math.min(squad.count, Math.ceil(e.hp)); // trade one soldier per enemy hp
     squad.remove(lost);
     st.events.push({ type: 'soldiersLost', count: lost });
@@ -29,16 +30,17 @@ export function updateContacts(st: Stage, dt: number): void {
     st.events.push({ type: 'blood', x: e.x, z: e.z });
   }
 
-  // Soldiers that run into a barrel die one by one, each chipping off its hp.
-  const perSoldier = squad.count / Math.max(1, squad.displayed);
+  // Units pushing into a barrel lose soldiers every tick, each chipping off its hp.
+  // A big unit only loses its front rank (~sqrt of its size) per tick.
+  const frontRank = (tier: number) => Math.ceil(Math.sqrt(tierValue(tier)));
   for (const b of st.barrels) {
     if (!b.alive) continue;
     b.ramTimer -= dt;
     if (b.ramTimer > 0) continue;
-    const touching = countTouching(b.x, b.z, CONFIG.barrel.radius);
-    if (touching === 0) continue;
+    const pushing = touching(b.x, b.z, CONFIG.barrel.radius, frontRank);
+    if (pushing === 0) continue;
     b.ramTimer = CONFIG.barrel.ramTick;
-    const loss = Math.min(Math.ceil(b.hp), Math.ceil(touching * perSoldier));
+    const loss = Math.min(Math.ceil(b.hp), pushing);
     squad.remove(loss);
     st.events.push({ type: 'soldiersLost', count: loss });
     b.hp -= loss;

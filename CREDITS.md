@@ -5,7 +5,7 @@ All 3D models are by **Kenney** (https://www.kenney.nl), released under
 
 | Pack | Files used | Source |
 |---|---|---|
-| Blocky Characters 2.0 | `character-m` (soldier), `character-l` (zombie), `character-o` (boss) | https://kenney.nl/assets/blocky-characters |
+| Blocky Characters 2.0 | `character-m` (soldier), `character-j` (officer, rank 10), `character-r` (elite, rank 100), `character-g` (mech, rank 1000), `character-l` (zombie), `character-o` (boss) | https://kenney.nl/assets/blocky-characters |
 | Survival Kit | `barrel`, `rock-sand-a/b/c` | https://kenney.nl/assets/survival-kit |
 | Blaster Kit 2.1 | `blaster-d` (rifle) | https://kenney.nl/assets/blaster-kit |
 

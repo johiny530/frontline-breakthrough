@@ -16,8 +16,8 @@ export class Gate {
     return Math.floor(this.value);
   }
 
-  hit(time: number): void {
-    this.value = Math.min(this.max, this.value + this.perHit);
+  hit(time: number, power = 1): void {
+    this.value = Math.min(this.max, this.value + this.perHit * power);
     this.hitTime = time;
   }
 }

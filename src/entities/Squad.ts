@@ -1,27 +1,46 @@
 import { CONFIG } from '../data/config';
 import { approach, clamp } from '../core/math';
 
-export interface Soldier {
-  // Offset from the squad center (world units).
-  ox: number;
+export interface Unit {
+  tier: number; // index into CONFIG.squad.tiers
+  ox: number; // offset from the squad center (world units)
   oz: number;
   fireTimer: number;
 }
 
 const GOLDEN_ANGLE = 2.399963;
+const TIERS = CONFIG.squad.tiers;
+
+export const tierValue = (tier: number): number => TIERS[tier].value;
+export const tierRadius = (tier: number): number => TIERS[tier].radius;
+
+/** Splits a soldier count into ranks, highest first: 123 -> [2, 1, 1, 0, 0, 0]. */
+export function decompose(count: number): number[] {
+  const tiers: number[] = [];
+  let rest = count;
+  for (let t = TIERS.length - 1; t >= 0; t--) {
+    // Lower tiers hold at most 9 units; the top tier holds the rest.
+    const n = t === TIERS.length - 1 ? Math.floor(rest / TIERS[t].value) : Math.min(9, Math.floor(rest / TIERS[t].value));
+    for (let i = 0; i < n; i++) tiers.push(t);
+    rest -= n * TIERS[t].value;
+  }
+  return tiers;
+}
 
 /**
- * The player's crowd. `count` is the real number of soldiers; only up to
- * CONFIG.squad.maxDisplayed of them exist as Soldier objects in a sunflower formation.
+ * The player's army. `count` is the real number of soldiers; it is shown as
+ * ranked units (1 / 10 / 100 / 1000) so the formation stays small enough to steer.
+ * Units are packed in a sunflower pattern, biggest in the middle.
  */
 export class Squad {
   x = 0;
   targetX = 0;
   z = 0;
   count: number;
-  readonly soldiers: Soldier[] = [];
-  private squeeze = 1;
-  // Where newly added soldiers appear (world space), e.g. a broken barrel.
+  readonly units: Unit[] = [];
+  private slots: [number, number][] = [];
+  private extent = 0;
+  // Where newly formed units appear (world space), e.g. a broken barrel.
   private spawnFrom: { x: number; z: number } | null = null;
 
   constructor(count: number) {
@@ -29,18 +48,13 @@ export class Squad {
     this.syncFormation(true);
   }
 
-  get displayed(): number {
-    return Math.min(this.count, CONFIG.squad.maxDisplayed);
-  }
-
-  /** Formation radius before squeezing to the road width. */
+  /** Formation radius, including the outermost unit's body. */
   get radius(): number {
-    return CONFIG.squad.spacing * Math.sqrt(Math.max(1, this.displayed));
+    return this.extent;
   }
 
-  /** Half extent along x after squeezing. */
   get halfWidthX(): number {
-    return this.radius * this.squeeze;
+    return this.extent;
   }
 
   add(n: number, fromX?: number, fromZ?: number): void {
@@ -52,46 +66,75 @@ export class Squad {
   }
 
   remove(n: number): void {
+    if (n <= 0) return;
     this.count = Math.max(0, this.count - n);
     this.syncFormation(false);
   }
 
   update(dt: number): void {
-    const s = CONFIG.squad;
-    const edge = CONFIG.track.halfWidth - s.soldierRadius;
-    this.squeeze = Math.min(1, edge / Math.max(this.radius, 0.01));
-    const limit = Math.max(0, edge - this.halfWidthX);
+    const edge = CONFIG.track.halfWidth;
+    const limit = Math.max(0, edge - this.extent);
     // Clamp the target too, so steering back from the curb responds immediately.
     this.targetX = clamp(this.targetX, -limit, limit);
-    this.x += (this.targetX - this.x) * approach(s.followRate, dt);
+    this.x += (this.targetX - this.x) * approach(CONFIG.squad.followRate, dt);
 
-    const k = approach(s.slotFollowRate, dt);
-    for (let i = 0; i < this.soldiers.length; i++) {
-      const [sx, sz] = this.slot(i);
-      const sol = this.soldiers[i];
-      sol.ox += (sx - sol.ox) * k;
-      sol.oz += (sz - sol.oz) * k;
+    const k = approach(CONFIG.squad.slotFollowRate, dt);
+    for (let i = 0; i < this.units.length; i++) {
+      const [sx, sz] = this.slots[i];
+      const u = this.units[i];
+      u.ox += (sx - u.ox) * k;
+      u.oz += (sz - u.oz) * k;
     }
   }
 
-  slot(i: number): [number, number] {
-    if (i === 0) return [0, 0];
-    const r = CONFIG.squad.spacing * Math.sqrt(i);
-    const a = i * GOLDEN_ANGLE;
-    return [Math.cos(a) * r * this.squeeze, Math.sin(a) * r];
-  }
-
+  /**
+   * Rebuilds the unit list for the current count. Units of a tier that still
+   * exists keep their position; merged or new units start at the spawn point
+   * (or the centroid of the units they replace) and walk to their slots.
+   */
   private syncFormation(snap: boolean): void {
-    const want = this.displayed;
-    while (this.soldiers.length > want) this.soldiers.pop();
-    while (this.soldiers.length < want) {
-      const i = this.soldiers.length;
-      let [ox, oz] = this.slot(i);
-      if (!snap && this.spawnFrom) {
-        ox = this.spawnFrom.x - this.x;
-        oz = this.spawnFrom.z - this.z;
-      }
-      this.soldiers.push({ ox, oz, fireTimer: Math.random() * CONFIG.fire.interval });
+    const wanted = decompose(this.count);
+    const pool = new Map<number, Unit[]>();
+    for (const u of this.units) {
+      const list = pool.get(u.tier) ?? [];
+      list.push(u);
+      pool.set(u.tier, list);
     }
+    // Centroid of the old formation: where merged units appear.
+    let cx = 0;
+    let cz = 0;
+    for (const u of this.units) { cx += u.ox; cz += u.oz; }
+    if (this.units.length) { cx /= this.units.length; cz /= this.units.length; }
+
+    this.computeSlots(wanted);
+    const next: Unit[] = [];
+    wanted.forEach((tier, i) => {
+      const reuse = pool.get(tier)?.shift();
+      if (reuse) { next.push(reuse); return; }
+      let [ox, oz] = this.slots[i];
+      if (!snap) {
+        if (this.spawnFrom) { ox = this.spawnFrom.x - this.x; oz = this.spawnFrom.z - this.z; }
+        else { ox = cx; oz = cz; }
+      }
+      next.push({ tier, ox, oz, fireTimer: Math.random() * CONFIG.fire.interval });
+    });
+    this.units.length = 0;
+    this.units.push(...next);
+  }
+
+  /** Area-weighted sunflower: each unit sits at the radius enclosing the ones before it. */
+  private computeSlots(tiers: number[]): void {
+    this.slots = [];
+    let area = 0;
+    let extent = 0;
+    tiers.forEach((t, i) => {
+      const r = tierRadius(t);
+      const dist = i === 0 ? 0 : Math.sqrt(area / Math.PI);
+      const a = i * GOLDEN_ANGLE;
+      this.slots.push([Math.cos(a) * dist, Math.sin(a) * dist]);
+      area += CONFIG.squad.packing * (2 * r) * (2 * r);
+      extent = Math.max(extent, dist + r);
+    });
+    this.extent = extent;
   }
 }

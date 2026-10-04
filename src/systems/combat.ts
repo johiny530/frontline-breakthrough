@@ -2,6 +2,7 @@ import { CONFIG } from '../data/config';
 import type { Stage } from '../core/Stage';
 import type { Enemy } from '../entities/Enemy';
 import { segmentHitsCircle } from './geometry';
+import { tierValue } from '../entities/Squad';
 
 const BULLET_RADIUS = 0.08;
 
@@ -26,18 +27,16 @@ export function updateCombat(st: Stage, dt: number): void {
   const squad = st.squad;
   const boss = st.boss?.alive ? st.boss : null;
 
-  // Each displayed soldier stands for count/displayed real soldiers.
-  const damage = fire.damage * squad.count / Math.max(1, squad.displayed);
   const life = fire.range / fire.bulletSpeed;
   // Auto-aim candidates: walking enemies ahead of the squad and in range.
   const aimable = boss ? [] : st.enemies.filter((e) => e.state === 'walking' && e.z < squad.z && squad.z - e.z < fire.range);
   let shots = 0;
-  for (const s of squad.soldiers) {
-    s.fireTimer -= dt;
-    if (s.fireTimer > 0) continue;
-    s.fireTimer += fire.interval;
-    const sx = squad.x + s.ox;
-    const sz = squad.z + s.oz - 0.3;
+  for (const u of squad.units) {
+    u.fireTimer -= dt;
+    if (u.fireTimer > 0) continue;
+    u.fireTimer += fire.interval;
+    const sx = squad.x + u.ox;
+    const sz = squad.z + u.oz - 0.3;
     let vx = 0;
     let vz = -fire.bulletSpeed;
     // Everyone focuses the boss once it shows up; otherwise aim at the nearest
@@ -50,7 +49,8 @@ export function updateCombat(st: Stage, dt: number): void {
       vx = (dx / len) * fire.bulletSpeed;
       vz = (dz / len) * fire.bulletSpeed;
     }
-    st.bullets.spawn(sx, sz, vx, vz, life, damage);
+    // A unit fires one bullet carrying the damage of all the soldiers it stands for.
+    st.bullets.spawn(sx, sz, vx, vz, life, fire.damage * tierValue(u.tier));
     shots++;
   }
   if (shots > 0) st.events.push({ type: 'shots', count: shots });
@@ -72,49 +72,47 @@ export function updateCombat(st: Stage, dt: number): void {
     b.x += b.vx * dt;
     b.z += b.vz * dt;
     b.life -= dt;
-    let hit = false;
 
+    // Gates stop the bullet; bigger bullets pump the gate harder.
     for (const g of gates) {
       if (z0 > g.z && b.z <= g.z && Math.abs(b.x - g.x) < g.halfWidth) {
-        g.hit(st.time);
+        g.hit(st.time, Math.sqrt(b.damage));
         st.events.push({ type: 'gateHit', gate: g });
-        hit = true;
+        b.damage = 0;
         break;
       }
     }
-    if (!hit) {
-      for (const br of barrels) {
-        if (!br.alive) continue;
-        if (!segmentHitsCircle(x0, z0, b.x, b.z, br.x, br.z, CONFIG.barrel.radius + BULLET_RADIUS)) continue;
-        br.hp -= b.damage;
-        br.hitTime = st.time;
-        st.events.push({ type: 'barrelHit' });
-        if (br.hp <= 0) {
-          br.alive = false;
-          st.score.barrelPoints += br.maxHp;
-          squad.add(br.reward, br.x, br.z);
-          st.events.push({ type: 'barrelBreak', barrel: br });
-        }
-        hit = true;
-        break;
+
+    // Barrels and enemies take what they need; the rest of the damage pierces on.
+    for (const br of barrels) {
+      if (b.damage <= 0) break;
+      if (!br.alive || !segmentHitsCircle(x0, z0, b.x, b.z, br.x, br.z, CONFIG.barrel.radius + BULLET_RADIUS)) continue;
+      const dealt = Math.min(b.damage, br.hp);
+      br.hp -= dealt;
+      b.damage -= dealt;
+      br.hitTime = st.time;
+      st.events.push({ type: 'barrelHit' });
+      if (br.hp <= 0) {
+        br.alive = false;
+        st.score.barrelPoints += br.maxHp;
+        squad.add(br.reward, br.x, br.z);
+        st.events.push({ type: 'barrelBreak', barrel: br });
       }
     }
-    if (!hit) {
-      for (const e of enemies) {
-        if (!e.alive) continue;
-        if (!segmentHitsCircle(x0, z0, b.x, b.z, e.x, e.z, e.radius + BULLET_RADIUS)) continue;
-        e.hp -= b.damage;
-        if (e.isBoss) st.events.push({ type: 'bossHit' });
-        if (e.hp <= 0) {
-          e.kill();
-          st.score.kills++;
-          st.events.push({ type: 'blood', x: e.x, z: e.z });
-          st.events.push({ type: e.isBoss ? 'bossDeath' : 'kill' });
-        }
-        hit = true;
-        break;
+    for (const e of enemies) {
+      if (b.damage <= 0) break;
+      if (!e.alive || !segmentHitsCircle(x0, z0, b.x, b.z, e.x, e.z, e.radius + BULLET_RADIUS)) continue;
+      const dealt = Math.min(b.damage, e.hp);
+      e.hp -= dealt;
+      b.damage -= dealt;
+      if (e.isBoss) st.events.push({ type: 'bossHit' });
+      if (e.hp <= 0) {
+        e.kill();
+        st.score.kills++;
+        st.events.push({ type: 'blood', x: e.x, z: e.z });
+        st.events.push({ type: e.isBoss ? 'bossDeath' : 'kill' });
       }
     }
-    if (hit || b.life <= 0) st.bullets.removeAt(i);
+    if (b.damage <= 1e-6 || b.life <= 0) st.bullets.removeAt(i);
   }
 }
