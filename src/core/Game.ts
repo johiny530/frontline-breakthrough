@@ -1,3 +1,4 @@
+import { GameAudio } from '../audio/GameAudio';
 import { CONFIG } from '../data/config';
 import { LEVELS } from '../data/levels';
 import { loadAssets } from '../render/Assets';
@@ -27,13 +28,33 @@ export class Game {
   private view: StageView | null = null;
   private bot: Bot | null = null;
   private lastTime = 0;
+  private audio = new GameAudio();
 
   constructor(private root: HTMLElement, ui: HTMLElement) {
     this.save = loadSave(LEVELS.length);
     this.input = new Input(root);
     this.input.onPause = () => this.togglePause();
     this.hud = new Hud(ui, () => this.togglePause());
-    this.screens = new Screens(ui, (a, arg) => this.onAction(a, arg));
+    this.screens = new Screens(ui, (a, arg) => {
+      this.audio.click();
+      this.onAction(a, arg);
+    });
+    this.makeSoundToggle(ui);
+  }
+
+  private makeSoundToggle(ui: HTMLElement): void {
+    const btn = document.createElement('button');
+    btn.className = 'btn-sound';
+    const render = () => {
+      btn.textContent = this.audio.muted ? '🔇' : '🔊';
+      btn.setAttribute('aria-label', this.audio.muted ? '開啟聲音' : '關閉聲音');
+    };
+    btn.addEventListener('click', () => {
+      this.audio.toggleMute();
+      render();
+    });
+    render();
+    ui.appendChild(btn);
   }
 
   async start(): Promise<void> {
@@ -78,6 +99,7 @@ export class Game {
         this.steer(dt / steps);
         this.stage.update(dt / steps);
       }
+      this.audio.handle(this.stage.events); // before sync() clears the queue
       this.view.sync(dt);
       this.hud.update(this.stage, LEVELS.length);
       if (this.stage.status !== 'playing') this.endStage();
@@ -107,6 +129,8 @@ export class Game {
     this.mode = 'playing';
     this.screens.hide();
     this.hud.show(true);
+    this.audio.setPaused(false);
+    this.audio.playTrack('stage');
   }
 
   private endStage(): void {
@@ -122,6 +146,8 @@ export class Game {
       writeSave(this.save);
     }
     DEBUG.report(st);
+    this.audio.setPaused(false);
+    this.audio.result(st.status === 'won');
     this.screens.result(st, isBest, st.index + 1 < LEVELS.length);
   }
 
@@ -129,12 +155,15 @@ export class Game {
     this.mode = 'menu';
     this.hud.show(false);
     this.screens.menu(LEVELS, this.save);
+    this.audio.setPaused(false);
+    this.audio.playTrack('menu');
   }
 
   private togglePause(): void {
     if (this.mode === 'playing') {
       this.mode = 'paused';
       this.screens.pause();
+      this.audio.setPaused(true);
     } else if (this.mode === 'paused') {
       this.onAction('resume', 0);
     }
@@ -149,6 +178,7 @@ export class Game {
         this.mode = 'playing';
         this.screens.hide();
         this.input.consumeDrag();
+        this.audio.setPaused(false);
         break;
     }
   }

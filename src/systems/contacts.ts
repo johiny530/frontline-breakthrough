@@ -22,7 +22,9 @@ export function updateContacts(st: Stage, dt: number): void {
 
   for (const e of st.enemies) {
     if (e.state !== 'walking' || countTouching(e.x, e.z, e.radius) === 0) continue;
-    squad.remove(Math.ceil(e.hp)); // trade one soldier per enemy hp
+    const lost = Math.min(squad.count, Math.ceil(e.hp)); // trade one soldier per enemy hp
+    squad.remove(lost);
+    st.events.push({ type: 'soldiersLost', count: lost });
     e.kill();
     st.events.push({ type: 'blood', x: e.x, z: e.z });
   }
@@ -38,6 +40,7 @@ export function updateContacts(st: Stage, dt: number): void {
     b.ramTimer = CONFIG.barrel.ramTick;
     const loss = Math.min(Math.ceil(b.hp), Math.ceil(touching * perSoldier));
     squad.remove(loss);
+    st.events.push({ type: 'soldiersLost', count: loss });
     b.hp -= loss;
     b.hitTime = st.time;
     st.events.push({ type: 'blood', x: b.x, z: b.z + CONFIG.barrel.radius });
@@ -67,6 +70,7 @@ export function updateContacts(st: Stage, dt: number): void {
       if (n > 0) {
         st.bossContactAcc -= n;
         squad.remove(n);
+        st.events.push({ type: 'soldiersLost', count: n });
         st.events.push({ type: 'blood', x: boss.x + (Math.random() - 0.5) * 2, z: front + 0.6 });
       }
     }

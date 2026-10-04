@@ -16,7 +16,15 @@ export type StageEvent =
   | { type: 'blood'; x: number; z: number }
   | { type: 'barrelBreak'; barrel: Barrel }
   | { type: 'gatePass'; gate: Gate; delta: number }
-  | { type: 'bossSpawn'; boss: Enemy };
+  | { type: 'bossSpawn'; boss: Enemy }
+  // Audio-oriented events (no positions needed).
+  | { type: 'shots'; count: number }
+  | { type: 'kill' }
+  | { type: 'gateHit'; gate: Gate }
+  | { type: 'barrelHit' }
+  | { type: 'soldiersLost'; count: number }
+  | { type: 'bossHit' }
+  | { type: 'bossDeath' };
 
 export interface ScoreSheet {
   kills: number;

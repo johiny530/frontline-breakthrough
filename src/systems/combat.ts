@@ -14,6 +14,7 @@ export function updateCombat(st: Stage, dt: number): void {
   // Each displayed soldier stands for count/displayed real soldiers.
   const damage = fire.damage * squad.count / Math.max(1, squad.displayed);
   const life = fire.range / fire.bulletSpeed;
+  let shots = 0;
   for (const s of squad.soldiers) {
     s.fireTimer -= dt;
     if (s.fireTimer > 0) continue;
@@ -31,7 +32,9 @@ export function updateCombat(st: Stage, dt: number): void {
       vz = (dz / len) * fire.bulletSpeed;
     }
     st.bullets.spawn(sx, sz, vx, vz, life, damage);
+    shots++;
   }
+  if (shots > 0) st.events.push({ type: 'shots', count: shots });
 
   // Only test targets in the firing window.
   const zNear = squad.z + 2;
@@ -55,6 +58,7 @@ export function updateCombat(st: Stage, dt: number): void {
     for (const g of gates) {
       if (z0 > g.z && b.z <= g.z && Math.abs(b.x - g.x) < g.halfWidth) {
         g.hit(st.time);
+        st.events.push({ type: 'gateHit', gate: g });
         hit = true;
         break;
       }
@@ -65,6 +69,7 @@ export function updateCombat(st: Stage, dt: number): void {
         if (!segmentHitsCircle(x0, z0, b.x, b.z, br.x, br.z, CONFIG.barrel.radius + BULLET_RADIUS)) continue;
         br.hp -= b.damage;
         br.hitTime = st.time;
+        st.events.push({ type: 'barrelHit' });
         if (br.hp <= 0) {
           br.alive = false;
           st.score.barrelPoints += br.maxHp;
@@ -80,10 +85,12 @@ export function updateCombat(st: Stage, dt: number): void {
         if (!e.alive) continue;
         if (!segmentHitsCircle(x0, z0, b.x, b.z, e.x, e.z, e.radius + BULLET_RADIUS)) continue;
         e.hp -= b.damage;
+        if (e.isBoss) st.events.push({ type: 'bossHit' });
         if (e.hp <= 0) {
           e.kill();
           st.score.kills++;
           st.events.push({ type: 'blood', x: e.x, z: e.z });
+          st.events.push({ type: e.isBoss ? 'bossDeath' : 'kill' });
         }
         hit = true;
         break;
