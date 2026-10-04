@@ -25,6 +25,7 @@ export class Hud {
         <div class="route-track"><div class="route-fill" data-id="route"></div></div>
         <span class="route-end" data-id="routeEnd"></span>
       </div>
+      <ul class="hud-perks" data-id="perks"></ul>
       <div class="hud-enemies">${ICONS.skull}<b data-id="enemies">0</b></div>
       <div class="bossbar hidden" data-id="boss">
         <span class="bossbar-label">BOSS</span>
@@ -84,6 +85,12 @@ export class Hud {
         this.banner('<small>WARNING</small>巨型殭屍接近<em>集中火力</em>', 'banner-boss');
       }
     }
+  }
+
+  /** Endless mode: owned perks as small tags (empty list hides the row). */
+  setPerks(perks: { name: string; level: number; rarity: string }[]): void {
+    this.q('perks').innerHTML = perks.map((p) =>
+      `<li class="r-${p.rarity}">${p.name}${p.level > 1 ? `<b>${p.level}</b>` : ''}</li>`).join('');
   }
 
   /** First-time controls hint; hides itself after a while. */

@@ -159,6 +159,7 @@ export class Game {
   private play(index: number): void {
     this.run = null;
     this.startStage(new Stage(LEVELS[index], index));
+    this.refreshPerks();
     // Teach the controls on the very first stage until it has been cleared once.
     this.hintTime = index === 0 && this.save.best[0] === 0 ? 7 : 0;
     this.hud.showHint(this.hintTime > 0);
@@ -172,6 +173,13 @@ export class Game {
   private startSector(): void {
     const run = this.run!;
     this.startStage(run.createStage(), sectorCode(run.sector), run.score);
+    this.refreshPerks();
+  }
+
+  private refreshPerks(): void {
+    this.hud.setPerks(this.run
+      ? this.run.owned().map(({ perk, level }) => ({ name: perk.name, level, rarity: perk.rarity }))
+      : []);
   }
 
   /** Supply crates hand out a random perk on the spot. */
@@ -182,6 +190,7 @@ export class Game {
       st.squad.add(added, ev.barrel.x, ev.barrel.z);
       this.hud.toast(`<small>補給箱</small>${perk.name}<em>${perk.desc}</em>`);
       this.audio.perk();
+      this.refreshPerks();
     }
   }
 
