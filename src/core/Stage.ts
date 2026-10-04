@@ -6,6 +6,7 @@ import { Enemy } from '../entities/Enemy';
 import { Gate } from '../entities/Gate';
 import { Squad } from '../entities/Squad';
 import { mulberry32 } from './math';
+import { IDENTITY_MODS, type RunMods } from '../data/endless';
 import { updateCombat } from '../systems/combat';
 import { updateContacts } from '../systems/contacts';
 import { updateEnemies } from '../systems/enemies';
@@ -15,6 +16,7 @@ export type StageStatus = 'playing' | 'won' | 'lost';
 export type StageEvent =
   | { type: 'blood'; x: number; z: number }
   | { type: 'barrelBreak'; barrel: Barrel }
+  | { type: 'crateBreak'; barrel: Barrel }
   | { type: 'gatePass'; gate: Gate; delta: number }
   | { type: 'bossSpawn'; boss: Enemy }
   // Audio-oriented events (no positions needed).
@@ -51,7 +53,10 @@ export class Stage {
   status: StageStatus = 'playing';
   bossContactAcc = 0;
 
-  constructor(readonly def: LevelDef, readonly index: number) {
+  /** Bookkeeping for armor: fractional soldiers saved so far. */
+  armorAcc = 0;
+
+  constructor(readonly def: LevelDef, readonly index: number, readonly mods: RunMods = IDENTITY_MODS) {
     this.squad = new Squad(def.startSoldiers);
     const rand = mulberry32(1000 + index);
     const { laneX: lx, gateHalfWidth } = CONFIG.track;
@@ -61,7 +66,7 @@ export class Stage {
       if (item.kind === 'gate') {
         this.gates.push(new Gate(laneX(item.lane, lx), z, gateHalfWidth, item.value, item.perHit, item.max));
       } else if (item.kind === 'barrel') {
-        this.barrels.push(new Barrel(item.x, z, item.hp, item.reward));
+        this.barrels.push(new Barrel(item.x, z, item.hp, item.reward, item.crate));
       } else {
         // Scatter the group in a loose grid around (x, z).
         const cols = Math.max(1, Math.round(item.spread * 2 / 0.75));

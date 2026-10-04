@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "sim": "tsx scripts/simulate.ts",
-    "build:artifact": "npm run build && node scripts/build-artifact.mjs"
+    "build:artifact": "npm run build && node scripts/build-artifact.mjs",
+    "sim:endless": "tsx scripts/simulate-endless.ts"
   },
   "devDependencies": {
     "@types/three": "^0.186.0",

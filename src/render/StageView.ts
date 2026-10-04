@@ -36,7 +36,7 @@ export class SharedView {
     rifle.rotation.set(Math.PI / 2, 0, 0);
 
     const legsOnly = (t: string) => t.startsWith('leg-');
-    const rankModels = [assets.soldier, assets.officer, assets.elite, assets.mech];
+    const rankModels = [assets.soldier, assets.officer, assets.elite, assets.mech, assets.mech];
     const tiers = CONFIG.squad.tiers;
     this.ranks = tiers.map((tier, i) => new CrowdRenderer(rankModels[i], {
       height: tier.height,
@@ -101,7 +101,7 @@ export class StageView {
     this.barrelScale = new THREE.Vector3((B.radius * 2) / size.x, B.height / size.y, (B.radius * 2) / size.z);
 
     for (const g of stage.gates) this.gates.push(this.makeGate(g.x, g.z));
-    for (const b of stage.barrels) this.barrels.push(this.makeBarrel(b.x, b.z));
+    for (const b of stage.barrels) this.barrels.push(this.makeBarrel(b.x, b.z, b.crate));
     this.root.add(this.squadLabel.sprite, this.bossLabel.sprite);
     this.labels.push(this.squadLabel, this.bossLabel);
     this.bossLabel.sprite.visible = false;
@@ -131,11 +131,25 @@ export class StageView {
     return { group, panel, label };
   }
 
-  private makeBarrel(x: number, z: number): BarrelView {
+  private makeBarrel(x: number, z: number, crate: boolean): BarrelView {
     const group = new THREE.Group();
-    const model = this.shared.assets.barrel.scene.clone();
-    model.scale.copy(this.barrelScale);
-    group.add(model);
+    if (crate) {
+      // Supply crate: a chest sized like a barrel, with an amber marker.
+      const model = this.shared.assets.crate.scene.clone();
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      model.scale.setScalar((CONFIG.barrel.radius * 2.2) / Math.max(size.x, size.z));
+      group.add(model);
+      const tag = new TextSprite(0.6);
+      tag.set('SUPPLY', '#f3a712');
+      tag.sprite.position.set(0, 2.0, 0);
+      group.add(tag.sprite);
+      this.labels.push(tag);
+    } else {
+      const model = this.shared.assets.barrel.scene.clone();
+      model.scale.copy(this.barrelScale);
+      group.add(model);
+    }
     const label = new TextSprite(0.75);
     label.sprite.position.set(0, 0.6, CONFIG.barrel.radius + 0.05);
     group.add(label.sprite);

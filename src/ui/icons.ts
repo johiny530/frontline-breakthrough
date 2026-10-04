@@ -12,5 +12,6 @@ export const ICONS = {
   chevron: svg('<path d="M3 4h7l5 8-5 8H3l5-8Z"/>', '0 0 18 24'),
   play: svg('<path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5Z"/>'),
   retry: svg('<path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z"/>'),
+  medal: svg('<path d="M6 2h4l2 4.5L14 2h4l-3.6 7.3a6.5 6.5 0 1 1-4.8 0Z"/><path d="m12 12.2 1.1 2.2 2.4.3-1.8 1.6.5 2.4L12 17.5l-2.2 1.2.5-2.4-1.8-1.6 2.4-.3Z" fill="var(--ink, #17190f)"/>'),
   list: svg('<path d="M4 5h3v3H4Zm5 0h11v3H9Zm-5 5.5h3v3H4Zm5 0h11v3H9ZM4 16h3v3H4Zm5 0h11v3H9Z"/>'),
 };

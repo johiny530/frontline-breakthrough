@@ -19,6 +19,7 @@ export const CONFIG = {
       { value: 10, radius: 0.3, height: 1.45 },
       { value: 100, radius: 0.4, height: 1.9 },
       { value: 1000, radius: 0.5, height: 2.4 },
+      { value: 10000, radius: 0.62, height: 3.0 },
     ],
     packing: 1.5, // formation area per unit, relative to (2 * radius)^2
     slotFollowRate: 6, // how fast units move to their formation slots

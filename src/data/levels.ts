@@ -18,6 +18,7 @@ export interface BarrelDef {
   x: number;
   hp: number;
   reward: number; // soldiers that join when the barrel breaks
+  crate?: boolean; // supply crate (endless mode): grants a random perk instead
 }
 
 export interface EnemyGroupDef {

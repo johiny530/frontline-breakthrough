@@ -1,5 +1,6 @@
 import type { LevelDef } from '../data/levels';
 import { Stage } from './Stage';
+import { EndlessRun } from './endless/EndlessRun';
 
 // URL flags for testing: ?stage=3 starts a stage directly, ?bot=1 lets a simple
 // autopilot steer, ?ts=4 speeds up time. Results are logged with a [FB] prefix.
@@ -76,4 +77,39 @@ export function simulateAll(levels: LevelDef[]): string {
       `barrels=${st.score.barrelPoints} total=${st.total} boss=${st.boss ? Math.ceil(st.boss.hp) : '-'} | ${counts.join(',')}`);
   });
   return out.join('\n');
+}
+
+/** Headless endless runs: how far the bot gets with random perk picks. */
+export function simulateEndless(runs: number, metaLevels: Record<string, number> = {}, maxSectors = 30): string {
+  const bot = new Bot();
+  const dt = 1 / 60;
+  const reached: number[] = [];
+  const lines: string[] = [];
+  for (let r = 0; r < runs; r++) {
+    const run = new EndlessRun(metaLevels, 1000 + r);
+    const trace: string[] = [];
+    while (run.sector <= maxSectors) {
+      const st = run.createStage();
+      for (let f = 0; f < 60 * 240 && st.status === 'playing'; f++) {
+        st.squad.targetX = bot.targetX(st);
+        st.update(dt);
+        for (const ev of st.events) {
+          if (ev.type === 'crateBreak') st.squad.add(run.takeRandom(st.squad.count).added);
+        }
+        st.events.length = 0;
+      }
+      if (!run.finishSector(st)) break;
+      trace.push(`${run.sector - 1}:${run.count}`);
+      while (run.pendingPicks > 0) {
+        const offer = run.offer();
+        run.take(offer[Math.floor(Math.random() * offer.length)]);
+        run.pendingPicks--;
+      }
+    }
+    reached.push(run.sectorsCleared);
+    lines.push(`run ${r + 1}: cleared ${run.sectorsCleared} sectors, score ${run.score}, medals ${run.medals} | ${trace.join(' ')}`);
+  }
+  const avg = reached.reduce((a, b) => a + b, 0) / Math.max(1, runs);
+  lines.push(`average sectors cleared: ${avg.toFixed(1)}`);
+  return lines.join('\n');
 }

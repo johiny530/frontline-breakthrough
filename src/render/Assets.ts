@@ -12,6 +12,7 @@ const MODEL_PATHS = {
   boss: 'blocky/character-o.glb',
   rifle: 'blaster/blaster-d.glb',
   barrel: 'survival/barrel.glb',
+  crate: 'survival/chest.glb', // endless-mode supply crate
   rockA: 'survival/rock-sand-a.glb',
   rockB: 'survival/rock-sand-b.glb',
   rockC: 'survival/rock-sand-c.glb',

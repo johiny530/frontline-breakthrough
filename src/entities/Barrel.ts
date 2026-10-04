@@ -9,6 +9,7 @@ export class Barrel {
     public z: number,
     public maxHp: number,
     public reward: number,
+    public crate = false,
   ) {
     this.hp = maxHp;
   }

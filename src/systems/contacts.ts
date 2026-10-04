@@ -23,7 +23,10 @@ export function updateContacts(st: Stage, dt: number): void {
 
   for (const e of st.enemies) {
     if (e.state !== 'walking' || touching(e.x, e.z, e.radius, one) === 0) continue;
-    const lost = Math.min(squad.count, Math.ceil(e.hp)); // trade one soldier per enemy hp
+    // Trade one soldier per enemy hp; armor saves a fraction, carried between hits.
+    st.armorAcc += Math.ceil(e.hp) * st.mods.armor;
+    const lost = Math.min(squad.count, Math.floor(st.armorAcc));
+    st.armorAcc -= lost;
     squad.remove(lost);
     st.events.push({ type: 'soldiersLost', count: lost });
     e.kill();

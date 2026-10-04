@@ -6,13 +6,15 @@ import { SharedView, StageView } from '../render/StageView';
 import { World } from '../render/World';
 import { Hud } from '../ui/Hud';
 import { ICONS } from '../ui/icons';
-import { Screens } from '../ui/Screens';
+import { Screens, sectorCode } from '../ui/Screens';
+import { META_UPGRADES, type PerkDef } from '../data/endless';
+import { EndlessRun } from './endless/EndlessRun';
 import { Bot, DEBUG, simulateAll } from './Debug';
 import { Input } from './Input';
 import { Stage } from './Stage';
 import { loadSave, writeSave, type SaveData } from './Storage';
 
-type Mode = 'loading' | 'menu' | 'playing' | 'paused' | 'result';
+type Mode = 'loading' | 'menu' | 'playing' | 'paused' | 'result' | 'perk';
 
 const MAX_DT = 1 / 30;
 
@@ -30,6 +32,8 @@ export class Game {
   private bot: Bot | null = null;
   private lastTime = 0;
   private menuTime = 0;
+  private run: EndlessRun | null = null; // set while an endless run is active
+  private offer: PerkDef[] = [];
   private audio = new GameAudio();
 
   constructor(private root: HTMLElement, ui: HTMLElement) {
@@ -104,6 +108,7 @@ export class Game {
         this.steer(dt / steps);
         this.stage.update(dt / steps);
       }
+      if (this.run) this.handleCrates(this.stage);
       this.audio.handle(this.stage.events); // before sync() clears the queue
       this.view.sync(dt);
       this.hud.update(this.stage);
@@ -130,15 +135,40 @@ export class Game {
   }
 
   private play(index: number): void {
+    this.run = null;
+    this.startStage(new Stage(LEVELS[index], index));
+  }
+
+  private startEndless(): void {
+    this.run = new EndlessRun(this.save.meta);
+    this.startSector();
+  }
+
+  private startSector(): void {
+    const run = this.run!;
+    this.startStage(run.createStage(), sectorCode(run.sector), run.score);
+  }
+
+  /** Supply crates hand out a random perk on the spot. */
+  private handleCrates(st: Stage): void {
+    for (const ev of st.events) {
+      if (ev.type !== 'crateBreak') continue;
+      const { perk, added } = this.run!.takeRandom(st.squad.count);
+      st.squad.add(added, ev.barrel.x, ev.barrel.z);
+      this.hud.toast(`<small>補給箱</small>${perk.name}<em>${perk.desc}</em>`);
+    }
+  }
+
+  private startStage(stage: Stage, code?: string, scoreOffset = 0): void {
     this.view?.dispose();
-    this.stage = new Stage(LEVELS[index], index);
+    this.stage = stage;
     this.view = new StageView(this.stage, this.shared, this.world);
     this.bot = DEBUG.bot ? new Bot() : null;
     this.input.consumeDrag();
     this.mode = 'playing';
     this.screens.hide();
     this.hud.show(true);
-    this.hud.start(this.stage);
+    this.hud.start(this.stage, code, scoreOffset);
     this.audio.setPaused(false);
     this.audio.playTrack('stage');
   }
@@ -147,6 +177,10 @@ export class Game {
     const st = this.stage!;
     this.mode = 'result';
     this.hud.show(false);
+    if (this.run) {
+      this.endSector(st, this.run);
+      return;
+    }
     let isBest = false;
     // Bot runs are tests; keep them out of the player's records.
     if (st.status === 'won' && !this.bot) {
@@ -161,14 +195,66 @@ export class Game {
     this.screens.result(st, isBest, st.index + 1 < LEVELS.length);
   }
 
+  private endSector(st: Stage, run: EndlessRun): void {
+    this.audio.setPaused(false);
+    if (run.finishSector(st)) {
+      this.audio.result(true);
+      this.showPerks();
+      return;
+    }
+    // The run is over: pay out medals and keep records (bot runs are tests).
+    const earned = run.medals;
+    const rec = this.save.endless;
+    const record = run.sectorsCleared > rec.sector || run.score > rec.score;
+    if (!this.bot) {
+      this.save.medals += earned;
+      rec.sector = Math.max(rec.sector, run.sectorsCleared);
+      rec.score = Math.max(rec.score, run.score);
+      writeSave(this.save);
+    }
+    this.audio.result(false);
+    this.screens.runOver(run, earned, record);
+  }
+
+  private showPerks(): void {
+    const run = this.run!;
+    this.mode = 'perk';
+    this.offer = run.offer();
+    const title = run.pendingPicks > 1 ? `擊敗 Boss！選擇強化（還有 ${run.pendingPicks} 次）` : '選擇強化';
+    this.screens.perks(run, this.offer, title);
+  }
+
+  private showShop(): void {
+    this.mode = 'menu';
+    this.clearStage();
+    this.hud.show(false);
+    this.screens.shop(this.save);
+    this.audio.playTrack('menu');
+  }
+
+  private buy(index: number): void {
+    const u = META_UPGRADES[index];
+    const lv = this.save.meta[u.id] ?? 0;
+    const cost = u.baseCost * (lv + 1);
+    if (lv >= u.maxLevel || this.save.medals < cost) return;
+    this.save.medals -= cost;
+    this.save.meta[u.id] = lv + 1;
+    writeSave(this.save);
+    this.screens.shop(this.save);
+  }
+
+  /** Removes the finished stage so menus fly over an empty road. */
+  private clearStage(): void {
+    if (!this.view) return;
+    this.view.dispose();
+    this.view = null;
+    this.world.buildTrack(60, 1);
+  }
+
   private showMenu(): void {
     this.mode = 'menu';
-    // Clear the finished stage so the menu flies over an empty road.
-    if (this.view) {
-      this.view.dispose();
-      this.view = null;
-      this.world.buildTrack(60, 1);
-    }
+    this.run = null;
+    this.clearStage();
     this.hud.show(false);
     this.screens.menu(LEVELS, this.save);
     this.audio.setPaused(false);
@@ -178,7 +264,7 @@ export class Game {
   private togglePause(): void {
     if (this.mode === 'playing') {
       this.mode = 'paused';
-      this.screens.pause(this.stage!);
+      this.screens.pause(this.stage!, this.run);
       this.audio.setPaused(true);
     } else if (this.mode === 'paused') {
       this.onAction('resume', 0);
@@ -188,7 +274,27 @@ export class Game {
   onAction(action: string, arg: number): void {
     switch (action) {
       case 'play': this.play(arg); break;
-      case 'retry': if (this.stage) this.play(this.stage.index); break;
+      case 'retry':
+        if (this.run) this.startEndless();
+        else if (this.stage) this.play(this.stage.index);
+        break;
+      case 'endless': this.startEndless(); break;
+      case 'shop': this.showShop(); break;
+      case 'buy': this.buy(arg); break;
+      case 'perk': {
+        const run = this.run!;
+        run.take(this.offer[arg]);
+        run.pendingPicks--;
+        if (run.pendingPicks > 0) this.showPerks();
+        else this.startSector();
+        break;
+      }
+      case 'reroll':
+        if (this.run && this.run.rerolls > 0) {
+          this.run.rerolls--;
+          this.showPerks();
+        }
+        break;
       case 'menu': this.showMenu(); break;
       case 'resume':
         this.mode = 'playing';
