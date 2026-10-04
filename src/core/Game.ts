@@ -2,7 +2,7 @@ import { GameAudio } from '../audio/GameAudio';
 import { CONFIG } from '../data/config';
 import { LEVELS } from '../data/levels';
 import { loadAssets } from '../render/Assets';
-import { SharedView, StageView } from '../render/StageView';
+import { SharedView, StageView, warmUp } from '../render/StageView';
 import { World } from '../render/World';
 import { Hud } from '../ui/Hud';
 import { ICONS } from '../ui/icons';
@@ -47,6 +47,15 @@ export class Game {
       this.onAction(a, arg);
     });
     this.makeSoundToggle(ui);
+    // Keyboard shortcuts on overlays: 1/2/3 pick a perk card, Enter presses the main button.
+    window.addEventListener('keydown', (e) => {
+      if (this.mode === 'perk' && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) {
+        const i = Number(e.code.slice(-1)) - 1;
+        if (i < this.offer.length) this.onAction('perk', i);
+      } else if ((this.mode === 'result' || this.mode === 'paused') && e.code === 'Enter') {
+        ui.querySelector<HTMLButtonElement>('.screen .btn-primary:not([disabled])')?.click();
+      }
+    });
     // Leaving the tab pauses the game, so returning doesn't drop you mid-fight.
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.mode === 'playing' && !DEBUG.bot) this.togglePause();
@@ -76,6 +85,7 @@ export class Game {
     await fonts;
     this.world = new World(this.root, assets);
     this.shared = new SharedView(assets, this.world);
+    warmUp(this.shared, this.world);
     this.world.buildTrack(60, 1);
     this.world.follow(0, 0);
 
@@ -181,6 +191,8 @@ export class Game {
     this.hud.showHint(false);
     this.stage = stage;
     this.view = new StageView(this.stage, this.shared, this.world);
+    // Compile shaders now so the first frame of the stage doesn't hitch.
+    this.world.renderer.compile(this.world.scene, this.world.camera);
     this.bot = DEBUG.bot ? new Bot() : null;
     this.input.consumeDrag();
     this.mode = 'playing';

@@ -396,6 +396,7 @@ kbd {
 .perk.r-rare { --rc: var(--r-rare); }
 .perk.r-epic { --rc: var(--r-epic); }
 .perk-name { grid-area: name; font-family: var(--f-zh); font-weight: 900; font-size: 5.4cqw; color: var(--steel); }
+.perk-rarity kbd { font-size: 2.4cqw; min-width: 3.6cqw; padding: 0 0.8cqw; margin: 0 1.6cqw 0 0; border-color: var(--rc); color: var(--rc); }
 .perk-rarity { grid-area: rarity; align-self: center; font-size: 2.8cqw; font-weight: 700; letter-spacing: 0.2em; color: var(--rc); }
 .perk-desc { grid-area: desc; font-size: 3.6cqw; color: var(--sand); }
 .perk-level { grid-area: level; font-size: 2.8cqw; color: var(--amber); }

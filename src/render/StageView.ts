@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
-import type { Stage } from '../core/Stage';
+import { Stage } from '../core/Stage';
+import { LEVELS } from '../data/levels';
 import type { Enemy } from '../entities/Enemy';
 import type { Assets } from './Assets';
 import { CrowdRenderer } from './CrowdRenderer';
@@ -80,6 +81,30 @@ export class SharedView {
       world.scene.add(o);
     }
   }
+}
+
+/**
+ * Draws one of everything once (off to the side) so every shader is compiled
+ * during loading. Instanced meshes with zero instances are skipped by the
+ * renderer, so a plain renderer.compile() would miss them.
+ */
+export function warmUp(shared: SharedView, world: World): void {
+  const st = new Stage(LEVELS[0], 0);
+  const view = new StageView(st, shared, world);
+  view.sync(0);
+  for (const c of [...shared.ranks, shared.zombies, shared.boss, shared.captives]) {
+    c.begin();
+    c.add(0, 0, 4);
+    c.update(0);
+  }
+  shared.bullets.count = 1;
+  shared.debris.burst(0, 1, 4, 0xffffff, 1);
+  shared.debris.update(0.01);
+  shared.effects.blood(0, 4);
+  shared.effects.update(0.01);
+  world.follow(0, 0);
+  world.render();
+  view.dispose();
 }
 
 interface GateView { group: THREE.Group; panel: THREE.Mesh; label: TextSprite }

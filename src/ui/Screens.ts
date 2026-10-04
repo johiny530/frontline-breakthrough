@@ -148,7 +148,7 @@ export class Screens {
     const cards = offer.map((p, i) => {
       const lv = run.level(p);
       return `<button class="perk r-${p.rarity}" data-action="perk" data-arg="${i}">
-        <span class="perk-rarity">${RARITY_LABEL[p.rarity]}</span>
+        <span class="perk-rarity"><kbd>${i + 1}</kbd>${RARITY_LABEL[p.rarity]}</span>
         <span class="perk-name">${p.name}</span>
         <span class="perk-desc">${p.desc}</span>
         <span class="perk-level">${p.maxLevel > 1 && p.maxLevel < 99 ? `等級 ${lv} → ${lv + 1}` : ''}</span>
