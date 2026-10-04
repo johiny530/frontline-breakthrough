@@ -14,6 +14,7 @@ export class World {
   private ground: THREE.Mesh;
   private track: THREE.Group | null = null;
   private trackDisposables: { dispose(): void }[] = [];
+  private zoom = 0;
 
   constructor(private container: HTMLElement, private assets: Assets) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -130,11 +131,13 @@ export class World {
     return m;
   }
 
-  /** Follow the squad from behind and above, like the original game. */
-  follow(x: number, z: number): void {
+  /** Follow the squad from behind and above; pull back as the formation grows. */
+  follow(x: number, z: number, squadRadius = 0): void {
     const c = CONFIG.camera;
     const cx = x * c.followX;
-    this.camera.position.set(cx, c.height, z + c.back);
+    const pull = Math.max(0, squadRadius - c.pullStart);
+    this.zoom += (pull - this.zoom) * 0.05;
+    this.camera.position.set(cx, c.height + this.zoom * c.pullHeight, z + c.back + this.zoom * c.pullBack);
     this.camera.lookAt(cx, 0, z - c.lookAhead);
     this.ground.position.x = cx;
     this.ground.position.z = z - 40;

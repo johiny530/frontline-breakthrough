@@ -114,7 +114,8 @@ export class Game {
     this.mode = 'result';
     this.hud.show(false);
     let isBest = false;
-    if (st.status === 'won') {
+    // Bot runs are tests; keep them out of the player's records.
+    if (st.status === 'won' && !this.bot) {
       isBest = st.total > this.save.best[st.index];
       if (isBest) this.save.best[st.index] = st.total;
       this.save.unlocked = Math.max(this.save.unlocked, Math.min(LEVELS.length, st.index + 2));

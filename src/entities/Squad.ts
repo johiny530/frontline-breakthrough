@@ -61,8 +61,9 @@ export class Squad {
     const edge = CONFIG.track.halfWidth - s.soldierRadius;
     this.squeeze = Math.min(1, edge / Math.max(this.radius, 0.01));
     const limit = Math.max(0, edge - this.halfWidthX);
-    this.targetX = clamp(this.targetX, -edge, edge);
-    this.x += (clamp(this.targetX, -limit, limit) - this.x) * approach(s.followRate, dt);
+    // Clamp the target too, so steering back from the curb responds immediately.
+    this.targetX = clamp(this.targetX, -limit, limit);
+    this.x += (this.targetX - this.x) * approach(s.followRate, dt);
 
     const k = approach(s.slotFollowRate, dt);
     for (let i = 0; i < this.soldiers.length; i++) {

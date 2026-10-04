@@ -223,7 +223,7 @@ export class StageView {
     s.bullets.instanceMatrix.needsUpdate = true;
 
     s.effects.update(dt);
-    this.world.follow(squad.x, squad.z);
+    this.world.follow(squad.x, squad.z, squad.radius);
   }
 
   private addEnemy(crowd: CrowdRenderer, e: Enemy, scale: number): boolean {

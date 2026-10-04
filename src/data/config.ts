@@ -57,5 +57,8 @@ export const CONFIG = {
     back: 7,
     lookAhead: 9,
     followX: 0.35,
+    pullStart: 1.5, // squad radius where the camera starts pulling back
+    pullHeight: 1.2,
+    pullBack: 1.4,
   },
 } as const;
