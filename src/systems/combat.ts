@@ -112,8 +112,9 @@ export function updateCombat(st: Stage, dt: number): void {
         if (br.crate) {
           st.events.push({ type: 'crateBreak', barrel: br });
         } else {
-          squad.add(Math.round(br.reward * mods.rescue), br.x, br.z);
-          st.events.push({ type: 'barrelBreak', barrel: br });
+          const freed = Math.round(br.reward * mods.rescue);
+          squad.add(freed, br.x, br.z);
+          st.events.push({ type: 'barrelBreak', barrel: br, freed });
         }
       }
     }

@@ -33,6 +33,11 @@ export class Hud {
       </div>
       <div class="banner hidden" data-id="banner"></div>
       <div class="toast hidden" data-id="toast"></div>
+      <div class="hint hidden" data-id="hint">
+        <div class="hint-arrows">${ICONS.chevron}<span class="hint-dot"></span>${ICONS.chevron}</div>
+        <p><b>左右拖曳</b>（或按 ← →）移動部隊</p>
+        <p>射擊<b>藍色閘門</b>讓數字變大再穿過去</p>
+      </div>
       <button class="icon-btn btn-pause" aria-label="暫停">${ICONS.pause}</button>`;
     parent.appendChild(this.el);
     this.q = (id) => this.el.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
@@ -79,6 +84,11 @@ export class Hud {
         this.banner('<small>WARNING</small>巨型殭屍接近<em>集中火力</em>', 'banner-boss');
       }
     }
+  }
+
+  /** First-time controls hint; hides itself after a while. */
+  showHint(visible: boolean): void {
+    this.q('hint').classList.toggle('hidden', !visible);
   }
 
   /** Short notice under the HUD, e.g. a perk from a supply crate. */

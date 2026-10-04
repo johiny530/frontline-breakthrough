@@ -51,7 +51,7 @@ export function updateContacts(st: Stage, dt: number): void {
     st.events.push({ type: 'blood', x: b.x, z: b.z + CONFIG.barrel.radius });
     if (b.hp <= 0) {
       b.alive = false; // destroyed by ramming: no reward
-      st.events.push({ type: 'barrelBreak', barrel: b });
+      st.events.push({ type: 'barrelBreak', barrel: b, freed: 0 });
     }
   }
 

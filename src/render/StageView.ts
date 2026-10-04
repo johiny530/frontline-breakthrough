@@ -4,6 +4,7 @@ import type { Stage } from '../core/Stage';
 import type { Enemy } from '../entities/Enemy';
 import type { Assets } from './Assets';
 import { CrowdRenderer } from './CrowdRenderer';
+import { Debris } from './Debris';
 import { Effects } from './Effects';
 import { TextSprite } from './TextSprite';
 import type { World } from './World';
@@ -12,6 +13,7 @@ const MAX_BULLETS = 1200;
 const BULLET_Y = 0.45;
 const VIEW_AHEAD = 60;
 const VIEW_BEHIND = 8;
+const FLOAT_LIFE = 1.1;
 
 /** Renderers that live for the whole session and are reused by every stage. */
 export class SharedView {
@@ -21,6 +23,7 @@ export class SharedView {
   readonly captives: CrowdRenderer;
   readonly bullets: THREE.InstancedMesh;
   readonly effects = new Effects();
+  readonly debris = new Debris();
   readonly gatePanel = new THREE.BoxGeometry(CONFIG.track.gateHalfWidth * 2, 1.5, 0.12);
   readonly gatePost = new THREE.BoxGeometry(0.16, 1.9, 0.16);
   readonly gateBlue = new THREE.MeshStandardMaterial({ color: 0x3f8cff, emissive: 0x1c4bb0, transparent: true, opacity: 0.7 });
@@ -73,7 +76,7 @@ export class SharedView {
     this.bullets.frustumCulled = false;
     this.bullets.count = 0;
 
-    for (const o of [...this.ranks.map((r) => r.group), this.zombies.group, this.boss.group, this.captives.group, this.bullets, this.effects.group]) {
+    for (const o of [...this.ranks.map((r) => r.group), this.zombies.group, this.boss.group, this.captives.group, this.bullets, this.effects.group, this.debris.group]) {
       world.scene.add(o);
     }
   }
@@ -90,6 +93,7 @@ export class StageView {
   private squadLabel = new TextSprite(0.8, true);
   private bossLabel = new TextSprite(0.9);
   private labels: TextSprite[] = [];
+  private floaters: { label: TextSprite; life: number }[] = [];
   private tmp = new THREE.Matrix4();
   private scaleTmp = new THREE.Matrix4();
   private barrelScale: THREE.Vector3;
@@ -164,10 +168,36 @@ export class StageView {
     const s = this.shared;
     const squad = st.squad;
 
+    let lost = 0;
     for (const ev of st.events) {
-      if (ev.type === 'blood') s.effects.blood(ev.x, ev.z);
+      switch (ev.type) {
+        case 'blood': s.effects.blood(ev.x, ev.z); break;
+        case 'barrelBreak':
+          s.debris.burst(ev.barrel.x, 0.6, ev.barrel.z, 0x9a5a2c, 18);
+          this.world.shake(0.25);
+          if (ev.freed > 0) this.floater(`+${ev.freed}`, '#9fe870', ev.barrel.x, 2, ev.barrel.z);
+          break;
+        case 'crateBreak':
+          s.debris.burst(ev.barrel.x, 0.6, ev.barrel.z, 0xf3a712, 22, 1.2);
+          this.world.shake(0.3);
+          break;
+        case 'gatePass':
+          if (ev.delta !== 0) {
+            this.floater(ev.delta > 0 ? `+${ev.delta}` : `${ev.delta}`, ev.delta > 0 ? '#8fc8ff' : '#ff7a6a',
+              squad.x + 1.4, 3.4, squad.z - squad.radius);
+          }
+          break;
+        case 'soldiersLost': lost += ev.count; break;
+        case 'bossDeath':
+          if (st.boss) s.debris.burst(st.boss.x, 1.5, st.boss.z, 0x4f9a6a, 60, 1.6);
+          this.world.shake(1);
+          break;
+      }
     }
+    // Shake in proportion to the share of the army lost this frame.
+    if (lost > 0) this.world.shake(Math.min(0.5, (lost / Math.max(10, squad.count + lost)) * 3));
     st.events.length = 0;
+    this.updateFloaters(dt);
 
     const near = (z: number) => z > squad.z - VIEW_AHEAD && z < squad.z + VIEW_BEHIND;
 
@@ -248,7 +278,33 @@ export class StageView {
     s.bullets.instanceMatrix.needsUpdate = true;
 
     s.effects.update(dt);
+    s.debris.update(dt);
     this.world.follow(squad.x, squad.z, squad.radius);
+  }
+
+  /** Rising, fading number (gate gains, rescued soldiers). */
+  private floater(text: string, color: string, x: number, y: number, z: number): void {
+    let f = this.floaters.find((f) => f.life <= 0);
+    if (!f) {
+      f = { label: new TextSprite(0.9), life: 0 };
+      this.labels.push(f.label);
+      this.root.add(f.label.sprite);
+      this.floaters.push(f);
+    }
+    f.label.set(text, color);
+    f.label.sprite.position.set(x, y, z);
+    f.label.sprite.visible = true;
+    f.life = FLOAT_LIFE;
+  }
+
+  private updateFloaters(dt: number): void {
+    for (const f of this.floaters) {
+      if (f.life <= 0) continue;
+      f.life -= dt;
+      f.label.sprite.position.y += dt * 1.6;
+      f.label.sprite.material.opacity = Math.min(1, f.life / (FLOAT_LIFE * 0.4));
+      if (f.life <= 0) f.label.sprite.visible = false;
+    }
   }
 
   private addEnemy(crowd: CrowdRenderer, e: Enemy, scale: number): boolean {
@@ -267,5 +323,6 @@ export class StageView {
     for (const c of [...s.ranks, s.zombies, s.boss, s.captives]) { c.begin(); c.update(0); }
     s.bullets.count = 0;
     s.effects.clear();
+    s.debris.clear();
   }
 }

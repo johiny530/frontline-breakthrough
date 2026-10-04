@@ -15,6 +15,8 @@ export class World {
   private track: THREE.Group | null = null;
   private trackDisposables: { dispose(): void }[] = [];
   private zoom = 0;
+  private trauma = 0; // camera shake, 0..1, decays every frame
+  private calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
   constructor(private container: HTMLElement, private assets: Assets) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -131,6 +133,11 @@ export class World {
     return m;
   }
 
+  /** Adds camera shake (0..1); ignored when the viewer prefers reduced motion. */
+  shake(amount: number): void {
+    if (!this.calm) this.trauma = Math.min(1, this.trauma + amount);
+  }
+
   /** Follow the squad from behind and above; pull back as the formation grows. */
   follow(x: number, z: number, squadRadius = 0): void {
     const c = CONFIG.camera;
@@ -139,6 +146,14 @@ export class World {
     this.zoom += (pull - this.zoom) * 0.05;
     this.camera.position.set(cx, c.height + this.zoom * c.pullHeight, z + c.back + this.zoom * c.pullBack);
     this.camera.lookAt(cx, 0, z - c.lookAhead);
+    if (this.trauma > 0.001) {
+      // Squared trauma feels better: small hits barely move, big ones kick.
+      const k = this.trauma * this.trauma * 0.35;
+      this.camera.position.x += (Math.random() - 0.5) * k;
+      this.camera.position.y += (Math.random() - 0.5) * k;
+      this.camera.rotation.z += (Math.random() - 0.5) * k * 0.15;
+      this.trauma *= 0.9;
+    }
     this.ground.position.x = cx;
     this.ground.position.z = z - 40;
   }

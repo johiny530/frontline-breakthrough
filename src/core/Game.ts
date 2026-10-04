@@ -32,6 +32,7 @@ export class Game {
   private bot: Bot | null = null;
   private lastTime = 0;
   private menuTime = 0;
+  private hintTime = 0; // seconds the controls hint stays up
   private run: EndlessRun | null = null; // set while an endless run is active
   private offer: PerkDef[] = [];
   private audio = new GameAudio();
@@ -116,6 +117,13 @@ export class Game {
       this.audio.handle(this.stage.events); // before sync() clears the queue
       this.view.sync(dt);
       this.hud.update(this.stage);
+      if (this.hintTime > 0) {
+        this.hintTime -= dt;
+        if (this.hintTime <= 0 || Math.abs(this.stage.squad.x) > 1.2) {
+          this.hintTime = 0;
+          this.hud.showHint(false);
+        }
+      }
       if (this.stage.status !== 'playing') this.endStage();
     } else if (this.view) {
       this.view.sync(0);
@@ -141,6 +149,9 @@ export class Game {
   private play(index: number): void {
     this.run = null;
     this.startStage(new Stage(LEVELS[index], index));
+    // Teach the controls on the very first stage until it has been cleared once.
+    this.hintTime = index === 0 && this.save.best[0] === 0 ? 7 : 0;
+    this.hud.showHint(this.hintTime > 0);
   }
 
   private startEndless(): void {
@@ -166,6 +177,8 @@ export class Game {
 
   private startStage(stage: Stage, code?: string, scoreOffset = 0): void {
     this.view?.dispose();
+    this.hintTime = 0;
+    this.hud.showHint(false);
     this.stage = stage;
     this.view = new StageView(this.stage, this.shared, this.world);
     this.bot = DEBUG.bot ? new Bot() : null;

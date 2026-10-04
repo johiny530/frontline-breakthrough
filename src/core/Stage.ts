@@ -15,7 +15,7 @@ export type StageStatus = 'playing' | 'won' | 'lost';
 
 export type StageEvent =
   | { type: 'blood'; x: number; z: number }
-  | { type: 'barrelBreak'; barrel: Barrel }
+  | { type: 'barrelBreak'; barrel: Barrel; freed: number } // freed = soldiers rescued
   | { type: 'crateBreak'; barrel: Barrel }
   | { type: 'gatePass'; gate: Gate; delta: number }
   | { type: 'bossSpawn'; boss: Enemy }
