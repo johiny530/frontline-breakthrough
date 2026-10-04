@@ -87,7 +87,7 @@ export class StageView {
   private root = new THREE.Group();
   private gates: GateView[] = [];
   private barrels: BarrelView[] = [];
-  private squadLabel = new TextSprite(0.8);
+  private squadLabel = new TextSprite(0.8, true);
   private bossLabel = new TextSprite(0.9);
   private labels: TextSprite[] = [];
   private tmp = new THREE.Matrix4();
@@ -195,7 +195,7 @@ export class StageView {
       tallest = Math.max(tallest, CONFIG.squad.tiers[u.tier].height);
     }
     for (const r of s.ranks) r.update(dt);
-    this.squadLabel.set(`${squad.count}`, '#d6ecff');
+    this.squadLabel.set(`${squad.count}`, '#f4f1e6');
     this.squadLabel.sprite.position.set(squad.x, tallest + 0.5, squad.z - squad.radius - 0.4);
 
     // Enemies, including the falling-over death animation.

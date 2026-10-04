@@ -28,6 +28,7 @@ const walk = (dir) => {
 walk(root);
 
 const html = `<title>Frontline Breakthrough</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Chakra+Petch:wght@400;600;700&family=Noto+Sans+TC:wght@700;900&display=swap">
 <style>${css}</style>
 <div id="app"><div id="ui"></div></div>
 <script>window.__FB_INLINE_ASSETS = ${JSON.stringify(inline)};</script>

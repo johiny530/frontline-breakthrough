@@ -5,6 +5,7 @@ import { loadAssets } from '../render/Assets';
 import { SharedView, StageView } from '../render/StageView';
 import { World } from '../render/World';
 import { Hud } from '../ui/Hud';
+import { ICONS } from '../ui/icons';
 import { Screens } from '../ui/Screens';
 import { Bot, DEBUG, simulateAll } from './Debug';
 import { Input } from './Input';
@@ -28,6 +29,7 @@ export class Game {
   private view: StageView | null = null;
   private bot: Bot | null = null;
   private lastTime = 0;
+  private menuTime = 0;
   private audio = new GameAudio();
 
   constructor(private root: HTMLElement, ui: HTMLElement) {
@@ -44,9 +46,9 @@ export class Game {
 
   private makeSoundToggle(ui: HTMLElement): void {
     const btn = document.createElement('button');
-    btn.className = 'btn-sound';
+    btn.className = 'icon-btn btn-sound';
     const render = () => {
-      btn.textContent = this.audio.muted ? '🔇' : '🔊';
+      btn.innerHTML = this.audio.muted ? ICONS.soundOff : ICONS.soundOn;
       btn.setAttribute('aria-label', this.audio.muted ? '開啟聲音' : '關閉聲音');
     };
     btn.addEventListener('click', () => {
@@ -59,7 +61,10 @@ export class Game {
 
   async start(): Promise<void> {
     this.screens.loading(0, 1);
+    // Canvas labels need the display face loaded before they are drawn.
+    const fonts = document.fonts?.load('64px "Black Ops One"').catch(() => []);
     const assets = await loadAssets((d, t) => this.screens.loading(d, t));
+    await fonts;
     this.world = new World(this.root, assets);
     this.shared = new SharedView(assets, this.world);
     this.world.buildTrack(60, 1);
@@ -101,10 +106,14 @@ export class Game {
       }
       this.audio.handle(this.stage.events); // before sync() clears the queue
       this.view.sync(dt);
-      this.hud.update(this.stage, LEVELS.length);
+      this.hud.update(this.stage);
       if (this.stage.status !== 'playing') this.endStage();
     } else if (this.view) {
       this.view.sync(0);
+    } else if (this.mode === 'menu' || this.mode === 'loading') {
+      // Slow fly-over of the empty road behind the menu.
+      this.menuTime += dt;
+      this.world.follow(Math.sin(this.menuTime * 0.3) * 2, -((this.menuTime * 3) % 40), 2.5);
     }
     this.world.render();
   }
@@ -129,6 +138,7 @@ export class Game {
     this.mode = 'playing';
     this.screens.hide();
     this.hud.show(true);
+    this.hud.start(this.stage);
     this.audio.setPaused(false);
     this.audio.playTrack('stage');
   }
@@ -153,6 +163,12 @@ export class Game {
 
   private showMenu(): void {
     this.mode = 'menu';
+    // Clear the finished stage so the menu flies over an empty road.
+    if (this.view) {
+      this.view.dispose();
+      this.view = null;
+      this.world.buildTrack(60, 1);
+    }
     this.hud.show(false);
     this.screens.menu(LEVELS, this.save);
     this.audio.setPaused(false);
@@ -162,7 +178,7 @@ export class Game {
   private togglePause(): void {
     if (this.mode === 'playing') {
       this.mode = 'paused';
-      this.screens.pause();
+      this.screens.pause(this.stage!);
       this.audio.setPaused(true);
     } else if (this.mode === 'paused') {
       this.onAction('resume', 0);

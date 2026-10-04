@@ -9,7 +9,8 @@ export class TextSprite {
   private text = '';
   private color = '';
 
-  constructor(height: number) {
+  /** `badge` draws the text on a dark plate with an amber rim (used for the squad count). */
+  constructor(height: number, private badge = false) {
     this.canvas.width = 256;
     this.canvas.height = 96;
     this.ctx = this.canvas.getContext('2d')!;
@@ -27,13 +28,28 @@ export class TextSprite {
     this.color = color;
     const { ctx, canvas } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'bold 72px "Arial Black", Arial, sans-serif';
+    ctx.font = '68px "Black Ops One", "Arial Black", Arial, sans-serif';
+    if (this.badge) {
+      const w = Math.min(canvas.width - 8, ctx.measureText(text).width + 44);
+      const x = (canvas.width - w) / 2;
+      const c = 14; // cut corner, matching the UI plates
+      ctx.beginPath();
+      ctx.moveTo(x + c, 6); ctx.lineTo(x + w, 6); ctx.lineTo(x + w, 90 - c);
+      ctx.lineTo(x + w - c, 90); ctx.lineTo(x, 90); ctx.lineTo(x, 6 + c); ctx.closePath();
+      ctx.fillStyle = 'rgba(23, 25, 15, 0.85)';
+      ctx.fill();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#f3a712';
+      ctx.stroke();
+    }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = 12;
-    ctx.strokeStyle = 'rgba(20, 20, 30, 0.9)';
-    ctx.strokeText(text, canvas.width / 2, canvas.height / 2 + 4);
+    if (!this.badge) {
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = 'rgba(23, 25, 15, 0.9)';
+      ctx.strokeText(text, canvas.width / 2, canvas.height / 2 + 4);
+    }
     ctx.fillStyle = color;
     ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 4);
     this.texture.needsUpdate = true;

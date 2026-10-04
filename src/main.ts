@@ -7,5 +7,5 @@ const game = new Game(app, ui);
 (window as unknown as { __fb: Game }).__fb = game; // handy for console debugging
 game.start().catch((err: unknown) => {
   console.error(err);
-  ui.innerHTML = `<div class="screen dim"><div class="panel"><h2>載入失敗</h2><p>${String(err)}</p></div></div>`;
+  ui.innerHTML = `<div class="screen screen-dim"><div class="sheet lost"><h2 class="sheet-title">載入失敗</h2><p class="debrief">${String(err)}</p></div></div>`;
 });
