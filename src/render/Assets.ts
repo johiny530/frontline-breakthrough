@@ -17,13 +17,41 @@ const MODEL_PATHS = {
 export type ModelName = keyof typeof MODEL_PATHS;
 export type Assets = Record<ModelName, GLTF>;
 
+// Single-file builds (see scripts/build-artifact.mjs) inline every model and
+// texture as a data URI in this map, keyed by its path under assets/kenney/.
+declare global {
+  interface Window { __FB_INLINE_ASSETS?: Record<string, string> }
+}
+
+function createLoader(): GLTFLoader {
+  const inline = window.__FB_INLINE_ASSETS;
+  if (!inline) return new GLTFLoader();
+  const manager = new THREE.LoadingManager();
+  manager.setURLModifier((url) => {
+    const i = url.indexOf('assets/kenney/');
+    return i >= 0 ? inline[url.slice(i + 'assets/kenney/'.length)] ?? url : url;
+  });
+  return new GLTFLoader(manager);
+}
+
+/** Inline builds parse the decoded bytes directly instead of fetching. */
+async function loadModel(loader: GLTFLoader, path: string): Promise<GLTF> {
+  const dataUri = window.__FB_INLINE_ASSETS?.[path];
+  if (!dataUri) return loader.loadAsync(BASE + path);
+  const bin = atob(dataUri.slice(dataUri.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const dir = BASE + path.slice(0, path.lastIndexOf('/') + 1);
+  return loader.parseAsync(bytes.buffer, dir);
+}
+
 export async function loadAssets(onProgress?: (done: number, total: number) => void): Promise<Assets> {
-  const loader = new GLTFLoader();
+  const loader = createLoader();
   const names = Object.keys(MODEL_PATHS) as ModelName[];
   let done = 0;
   const loaded = await Promise.all(
     names.map(async (name) => {
-      const gltf = await loader.loadAsync(BASE + MODEL_PATHS[name]);
+      const gltf = await loadModel(loader, MODEL_PATHS[name]);
       gltf.scene.traverse((o) => {
         const mesh = o as THREE.Mesh;
         if (!mesh.isMesh) return;

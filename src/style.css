@@ -4,6 +4,7 @@
   --red: #e54848;
   --ink: #1b1d24;
   --panel: rgba(255, 255, 255, 0.96);
+  color-scheme: dark; /* single deliberate look: letterboxed on black */
   font-family: "Segoe UI", "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
 }
 
@@ -22,7 +23,7 @@ html, body {
 /* Fixed 9:16 play area, letterboxed on wide screens. */
 #app {
   position: relative;
-  height: 100dvh;
+  height: 100%;
   max-width: 100vw;
   aspect-ratio: 9 / 16;
   margin: 0 auto;
