@@ -10,7 +10,7 @@ mkdirSync(out, { recursive: true });
 
 const files = readdirSync(`${dist}/assets`);
 const css = readFileSync(`${dist}/assets/${files.find((f) => f.endsWith('.css'))}`, 'utf8');
-const js = readFileSync(`${dist}/assets/${files.find((f) => f.endsWith('.js'))}`, 'utf8').replace(/<\/script/gi, '<\/script');
+const js = readFileSync(`${dist}/assets/${files.find((f) => f.endsWith('.js'))}`, 'utf8').replace(/<\/script/gi, '<\\/script');
 
 const MIME = { '.glb': 'model/gltf-binary', '.png': 'image/png' };
 const root = `${dist}/assets/kenney`;
