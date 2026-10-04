@@ -20,8 +20,11 @@ export function updateEnemies(st: Stage, dt: number): void {
     if (e.state === 'idle' && ahead < cfg.activateDist) e.state = 'walking';
     if (e.state !== 'walking') continue;
     e.z += cfg.walkSpeed * dt;
+    // Chase the squad but keep the group's spread, so enemies don't pile into one column.
+    const edge = CONFIG.track.halfWidth - e.radius;
+    const target = clamp(squad.x + e.laneOffset * cfg.chaseSpread, -edge, edge);
     const step = cfg.chaseRate * dt;
-    e.x += clamp(squad.x - e.x, -step, step);
+    e.x += clamp(target - e.x, -step, step);
     if (e.z > squad.z + cfg.despawnBehind) e.state = 'gone';
   }
 

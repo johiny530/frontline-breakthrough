@@ -22,12 +22,15 @@ export const CONFIG = {
     bulletSpeed: 30,
     range: 16,
     damage: 1, // per bullet, multiplied by count / displayed
+    aimCone: 0.45, // soldiers auto-aim at enemies within |dx| < aimCone * distance + aimSlack
+    aimSlack: 0.6,
   },
   enemy: {
     radius: 0.36,
     walkSpeed: 2.2,
     activateDist: 26, // enemies start walking when this close
     chaseRate: 0.8, // lateral speed toward the squad, units/s
+    chaseSpread: 0.7, // fraction of its group offset an enemy keeps while chasing
     dieTime: 0.45,
     despawnBehind: 6,
   },

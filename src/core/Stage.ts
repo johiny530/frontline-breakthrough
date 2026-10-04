@@ -70,7 +70,9 @@ export class Stage {
           const r = Math.floor(i / cols);
           const ex = item.x - item.spread + (c + 0.5) * (item.spread * 2 / cols) + (rand() - 0.5) * 0.3;
           const ez = z - r * 0.75 + (rand() - 0.5) * 0.3;
-          this.enemies.push(new Enemy(ex, ez, item.hp, CONFIG.enemy.radius));
+          const e = new Enemy(ex, ez, item.hp, CONFIG.enemy.radius);
+          e.laneOffset = ex - item.x;
+          this.enemies.push(e);
         }
       }
     }

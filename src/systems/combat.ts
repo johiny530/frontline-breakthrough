@@ -5,6 +5,21 @@ import { segmentHitsCircle } from './geometry';
 
 const BULLET_RADIUS = 0.08;
 
+function pickTarget(enemies: Enemy[], sx: number, sz: number): Enemy | null {
+  const { aimCone, aimSlack } = CONFIG.fire;
+  let best: Enemy | null = null;
+  let bestScore = Infinity;
+  for (const e of enemies) {
+    const ahead = sz - e.z;
+    if (ahead <= 0) continue;
+    const dx = Math.abs(e.x - sx);
+    if (dx > aimCone * ahead + aimSlack) continue;
+    const score = ahead + dx * 2; // prefer close and straight ahead
+    if (score < bestScore) { bestScore = score; best = e; }
+  }
+  return best;
+}
+
 /** Soldiers fire; bullets fly and damage gates, barrels, enemies and the boss. */
 export function updateCombat(st: Stage, dt: number): void {
   const { fire } = CONFIG;
@@ -14,6 +29,8 @@ export function updateCombat(st: Stage, dt: number): void {
   // Each displayed soldier stands for count/displayed real soldiers.
   const damage = fire.damage * squad.count / Math.max(1, squad.displayed);
   const life = fire.range / fire.bulletSpeed;
+  // Auto-aim candidates: walking enemies ahead of the squad and in range.
+  const aimable = boss ? [] : st.enemies.filter((e) => e.state === 'walking' && e.z < squad.z && squad.z - e.z < fire.range);
   let shots = 0;
   for (const s of squad.soldiers) {
     s.fireTimer -= dt;
@@ -23,10 +40,12 @@ export function updateCombat(st: Stage, dt: number): void {
     const sz = squad.z + s.oz - 0.3;
     let vx = 0;
     let vz = -fire.bulletSpeed;
-    if (boss) {
-      // Everyone focuses the boss once it shows up.
-      const dx = boss.x - sx;
-      const dz = boss.z - sz;
+    // Everyone focuses the boss once it shows up; otherwise aim at the nearest
+    // enemy in a forward cone, or fire straight ahead (gates, barrels).
+    const target = boss ?? pickTarget(aimable, sx, sz);
+    if (target) {
+      const dx = target.x - sx;
+      const dz = target.z - sz;
       const len = Math.hypot(dx, dz) || 1;
       vx = (dx / len) * fire.bulletSpeed;
       vz = (dz / len) * fire.bulletSpeed;
