@@ -205,6 +205,8 @@ kbd {
   opacity: 0.8;
   animation: stamp 0.35s 0.15s cubic-bezier(0.3, 1.6, 0.5, 1) both;
 }
+/* Keep titles clear of the stamp in the top-right corner. */
+.stamp ~ .sheet-title { padding-right: 28cqw; }
 .won .stamp { color: var(--olive-2); }
 .lost .stamp { color: var(--alert); }
 
