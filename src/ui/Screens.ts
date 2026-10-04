@@ -120,7 +120,8 @@ export class Screens {
     </div>`;
   }
 
-  shop(save: SaveData): void {
+  /** `confirmReset` shows the second, red step of the reset button. */
+  shop(save: SaveData, confirmReset = false): void {
     const rows = META_UPGRADES.map((u, i) => {
       const lv = save.meta[u.id] ?? 0;
       const maxed = lv >= u.maxLevel;
@@ -140,6 +141,9 @@ export class Screens {
         <button class="btn btn-primary" data-action="endless">${ICONS.play}出擊</button>
         <button class="btn" data-action="menu">${ICONS.list}任務選單</button>
       </div>
+      <button class="btn-reset${confirmReset ? ' armed' : ''}" data-action="${confirmReset ? 'resetConfirm' : 'resetAsk'}">
+        ${confirmReset ? '確定清除？再按一次（無法復原）' : '重置無限模式進度'}
+      </button>
     </div>`, 'dim');
   }
 

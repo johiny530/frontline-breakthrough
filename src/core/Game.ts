@@ -334,6 +334,15 @@ export class Game {
       case 'endless': this.startEndless(); break;
       case 'shop': this.abandonRun(); this.showShop(); break;
       case 'buy': this.buy(arg); break;
+      case 'resetAsk': this.screens.shop(this.save, true); break;
+      case 'resetConfirm':
+        // Endless data only: campaign scores stay, so endless stays unlocked.
+        this.save.medals = 0;
+        this.save.meta = {};
+        this.save.endless = { sector: 0, score: 0 };
+        writeSave(this.save);
+        this.screens.shop(this.save);
+        break;
       case 'perk': {
         const run = this.run!;
         run.take(this.offer[arg]);

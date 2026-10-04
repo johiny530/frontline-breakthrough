@@ -387,6 +387,17 @@ kbd {
 .u-pips i { width: 3.2cqw; height: 1.4cqw; background: rgba(23, 25, 15, 0.18); }
 .u-pips i.on { background: var(--olive-2); }
 .btn-buy { width: auto; min-width: 20cqw; padding: 2cqw 2.6cqw; font-size: 3.6cqw; }
+.btn-reset {
+  align-self: center;
+  margin-top: 1cqw;
+  padding: 1.2cqw 2cqw;
+  background: none;
+  font-size: 3cqw;
+  text-decoration: underline;
+  text-underline-offset: 0.6cqw;
+}
+#ui .btn-reset { color: var(--muted); }
+#ui .btn-reset.armed { color: var(--steel); background: var(--alert); text-decoration: none; clip-path: var(--cut); }
 .btn[disabled] { opacity: 0.45; cursor: default; filter: none; }
 
 .perk-select { pointer-events: auto; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3cqw; }
