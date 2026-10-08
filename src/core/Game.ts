@@ -167,7 +167,9 @@ export class Game {
 
   private startEndless(): void {
     this.run = new EndlessRun(this.save.meta);
-    this.startSector();
+    // Vanguard upgrade: perk picks before the first sector.
+    if (this.run.pendingPicks > 0) this.showPerks();
+    else this.startSector();
   }
 
   private startSector(): void {
@@ -273,7 +275,7 @@ export class Game {
     const run = this.run!;
     this.mode = 'perk';
     this.offer = run.offer();
-    const title = run.pendingPicks > 1 ? `擊敗 Boss！選擇強化（還有 ${run.pendingPicks} 次）` : '選擇強化';
+    const title = run.sectorsCleared === 0 ? `出擊前補給（還有 ${run.pendingPicks} 次）` : run.pendingPicks > 1 ? `擊敗 Boss！選擇強化（還有 ${run.pendingPicks} 次）` : '選擇強化';
     this.screens.perks(run, this.offer, title);
   }
 

@@ -12,11 +12,13 @@ export interface RunMods {
   barrelDamage: number; // x damage dealt to barrels and crates
   bossDamage: number; // x damage dealt to the boss
   armor: number; // x soldiers lost on enemy contact (lower is better)
+  sectorGrowth: number; // x army after each cleared sector
+  medalGain: number; // x medals earned by the run
 }
 
 export const IDENTITY_MODS: RunMods = {
   fireInterval: 1, damage: 1, rangeAdd: 0, spread: 0, gatePower: 1,
-  rescue: 1, barrelDamage: 1, bossDamage: 1, armor: 1,
+  rescue: 1, barrelDamage: 1, bossDamage: 1, armor: 1, sectorGrowth: 1, medalGain: 1,
 };
 
 export type Rarity = 'common' | 'rare' | 'epic';
@@ -42,6 +44,9 @@ export const PERKS: PerkDef[] = [
   { id: 'demolition', name: '爆破專家', desc: '對木桶與補給箱傷害 ×2', rarity: 'common', maxLevel: 2, apply: (m) => { m.barrelDamage *= 2; } },
   { id: 'hunter', name: '獵殺者', desc: '對 Boss 傷害 +50%', rarity: 'rare', maxLevel: 3, apply: (m) => { m.bossDamage *= 1.5; } },
   { id: 'armor', name: '防彈衣', desc: '被殭屍碰到的損失 −20%', rarity: 'rare', maxLevel: 3, apply: (m) => { m.armor *= 0.8; } },
+  { id: 'overdrive', name: '過載', desc: '射速 +30%、傷害 +15%', rarity: 'epic', maxLevel: 2, apply: (m) => { m.fireInterval /= 1.3; m.damage *= 1.15; } },
+  { id: 'recruit', name: '戰地徵兵', desc: '每突破一段，兵力 +10%', rarity: 'rare', maxLevel: 5, apply: (m) => { m.sectorGrowth *= 1.1; } },
+  { id: 'bounty', name: '賞金獵人', desc: '本局勳章 +15%', rarity: 'common', maxLevel: 3, apply: (m) => { m.medalGain *= 1.15; } },
   {
     id: 'reinforce', name: '增援部隊', desc: '立刻增加 30% 兵力（至少 10 人）', rarity: 'common', maxLevel: 99,
     apply: () => {}, onPick: (count) => count + Math.max(10, Math.round(count * 0.3)),
@@ -60,8 +65,8 @@ export interface MetaUpgradeDef {
 }
 
 // Permanent upgrades have no level cap. Each level multiplies its stat, so the
-// bonus grows exponentially; every level bought also raises the threat level
-// (see threatOf), which multiplies enemy toughness and the medals earned.
+// bonus grows exponentially; costs grow exponentially too. Difficulty does not
+// depend on upgrades, only on how deep the run goes (see ENDLESS.pressure*).
 const fmt = (x: number) => (x >= 100 ? Math.round(x).toString() : x.toFixed(2).replace(/\.?0+$/, ''));
 export const META_UPGRADES: MetaUpgradeDef[] = [
   { id: 'troops', name: '預備部隊', desc: '開局兵力每級 ×1.2', effect: (lv) => `開局 ${troopsAt(lv)} 人`, baseCost: 6 },
@@ -70,24 +75,20 @@ export const META_UPGRADES: MetaUpgradeDef[] = [
   { id: 'intel', name: '情報網', desc: '每局可重抽強化 +1 次', effect: (lv) => `重抽 ${lv} 次`, baseCost: 12 },
   { id: 'sapper', name: '工兵連', desc: '打閘門加值每級 ×1.15', effect: (lv) => `閘門 ×${fmt(1.15 ** lv)}`, baseCost: 10 },
   { id: 'medic', name: '醫護兵', desc: '被殭屍碰到的損失每級 ×0.92', effect: (lv) => `損失 ×${fmt(0.92 ** lv)}`, baseCost: 12 },
+  { id: 'demolition', name: '爆破訓練', desc: '對木桶與補給箱傷害每級 ×1.15', effect: (lv) => `爆破 ×${fmt(1.15 ** lv)}`, baseCost: 8 },
+  { id: 'hunter', name: '反巨獸彈藥', desc: '對 Boss 傷害每級 ×1.12', effect: (lv) => `Boss 傷害 ×${fmt(1.12 ** lv)}`, baseCost: 8 },
+  { id: 'rescue', name: '搜救犬', desc: '木桶救出的士兵每級 ×1.1', effect: (lv) => `救出 ×${fmt(1.1 ** lv)}`, baseCost: 10 },
+  { id: 'recruit', name: '徵兵處', desc: '每突破一段，兵力每級再 ×1.03', effect: (lv) => `每段 ×${fmt(1.03 ** lv)}`, baseCost: 14 },
+  { id: 'loot', name: '戰利品', desc: '勳章收入每級 ×1.06', effect: (lv) => `勳章 ×${fmt(1.06 ** lv)}`, baseCost: 15 },
+  { id: 'vanguard', name: '先遣補給', desc: '出擊前多選 1 張強化卡', effect: (lv) => `開局 ${lv} 張`, baseCost: 20 },
 ];
 
 export const META_COST_GROWTH = 1.45;
 export const metaCost = (u: MetaUpgradeDef, lv: number) => Math.round(u.baseCost * META_COST_GROWTH ** lv);
 const troopsAt = (lv: number) => Math.round(ENDLESS.startCount * 1.2 ** lv);
 
-/**
- * Threat level = total permanent upgrade levels. Enemies, barrels and bosses get
- * threatHp^T times tougher (slower than a single upgrade line grows, so buying
- * still pays off), and medals are multiplied by 1 + threatMedals * T.
- */
-export function threatOf(levels: Record<string, number>): { level: number; hp: number; medals: number } {
-  const level = Object.values(levels).reduce((a, b) => a + b, 0);
-  return { level, hp: ENDLESS.threatHp ** level, medals: 1 + ENDLESS.threatMedals * level };
-}
-
 /** Applies permanent upgrades to a fresh run. */
-export function metaStart(levels: Record<string, number>): { mods: RunMods; startCount: number; rerolls: number } {
+export function metaStart(levels: Record<string, number>): { mods: RunMods; startCount: number; rerolls: number; startPicks: number } {
   const lv = (id: string) => levels[id] ?? 0;
   const mods: RunMods = { ...IDENTITY_MODS };
   mods.damage *= 1.12 ** lv('firepower');
@@ -97,7 +98,12 @@ export function metaStart(levels: Record<string, number>): { mods: RunMods; star
   mods.damage *= Math.max(1, rate / FIRE_RATE_CAP);
   mods.gatePower *= 1.15 ** lv('sapper');
   mods.armor *= 0.92 ** lv('medic');
-  return { mods, startCount: troopsAt(lv('troops')), rerolls: lv('intel') };
+  mods.barrelDamage *= 1.15 ** lv('demolition');
+  mods.bossDamage *= 1.12 ** lv('hunter');
+  mods.rescue *= 1.1 ** lv('rescue');
+  mods.sectorGrowth *= 1.03 ** lv('recruit');
+  mods.medalGain *= 1.06 ** lv('loot');
+  return { mods, startCount: troopsAt(lv('troops')), rerolls: lv('intel'), startPicks: lv('vanguard') };
 }
 const FIRE_RATE_CAP = 3;
 
@@ -133,7 +139,4 @@ export const ENDLESS = {
   crateHp: 0.8, // x A
   bossHp: 20, // x A, +25% per boss tier
   bossDps: 0.04, // x A soldiers per second on contact
-  // Threat from permanent upgrades (see threatOf).
-  threatHp: 1.025,
-  threatMedals: 0.05,
 };

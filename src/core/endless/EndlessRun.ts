@@ -1,4 +1,4 @@
-import { ENDLESS, metaStart, PERKS, threatOf, RARITY_WEIGHT, type PerkDef, type RunMods } from '../../data/endless';
+import { ENDLESS, metaStart, PERKS, RARITY_WEIGHT, type PerkDef, type RunMods } from '../../data/endless';
 import { mulberry32 } from '../math';
 import { Stage } from '../Stage';
 import { generateSector } from './Generator';
@@ -13,8 +13,6 @@ export class EndlessRun {
   readonly mods: RunMods; // shared by reference with the running Stage
   readonly perkLevels = new Map<string, number>();
   rerolls: number;
-  /** Threat from permanent upgrades: tougher enemies, more medals. */
-  readonly threat: { level: number; hp: number; medals: number };
   score = 0;
   kills = 0;
   sectorsCleared = 0;
@@ -30,7 +28,7 @@ export class EndlessRun {
     this.mods = start.mods;
     this.count = start.startCount;
     this.rerolls = start.rerolls;
-    this.threat = threatOf(metaLevels);
+    this.pendingPicks = start.startPicks;
     this.rand = mulberry32(seed ^ 0x5bd1e995);
   }
 
@@ -39,7 +37,7 @@ export class EndlessRun {
   }
 
   createStage(): Stage {
-    const def = generateSector(this.sector, this.seed, this.count, this.threat.hp);
+    const def = generateSector(this.sector, this.seed, this.count);
     return new Stage(def, 100 + this.sector, this.mods);
   }
 
@@ -49,7 +47,7 @@ export class EndlessRun {
     this.score += st.score.kills + st.score.barrelPoints;
     if (st.status !== 'won') return false;
     const boss = st.def.boss !== undefined;
-    this.count = st.squad.count;
+    this.count = Math.round(st.squad.count * this.mods.sectorGrowth);
     this.score += ENDLESS.sectorBonus * this.sector;
     this.sectorsCleared++;
     if (boss) this.bossesKilled++;
@@ -62,7 +60,7 @@ export class EndlessRun {
     const base = this.sectorsCleared * ENDLESS.medalsPerSector
       + this.bossesKilled * ENDLESS.medalsPerBoss
       + Math.floor(Math.sqrt(this.score) / ENDLESS.scoreMedalDiv);
-    return Math.floor(base * this.threat.medals);
+    return Math.floor(base * this.mods.medalGain);
   }
 
   level(perk: PerkDef): number {

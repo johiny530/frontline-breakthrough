@@ -24,8 +24,7 @@ export function updateContacts(st: Stage, dt: number): void {
   for (const e of st.enemies) {
     if (e.state !== 'walking' || touching(e.x, e.z, e.radius, one) === 0) continue;
     // Trade one soldier per enemy hp; armor saves a fraction, carried between hits.
-    // Threat makes enemies tougher to kill, not deadlier on contact.
-    st.armorAcc += Math.ceil(e.hp / (st.def.threat ?? 1)) * st.mods.armor;
+    st.armorAcc += Math.ceil(e.hp) * st.mods.armor;
     const lost = Math.min(squad.count, Math.floor(st.armorAcc));
     st.armorAcc -= lost;
     squad.remove(lost);

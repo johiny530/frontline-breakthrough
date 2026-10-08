@@ -1,7 +1,7 @@
 import type { LevelDef } from '../data/levels';
 import { endlessUnlocked, type SaveData } from '../core/Storage';
 import type { EndlessRun } from '../core/endless/EndlessRun';
-import { META_UPGRADES, metaCost, threatOf, type PerkDef } from '../data/endless';
+import { META_UPGRADES, metaCost, type PerkDef } from '../data/endless';
 import type { Stage } from '../core/Stage';
 import { CONFIG } from '../data/config';
 import { ICONS } from './icons';
@@ -147,13 +147,9 @@ export class Screens {
           ${save.medals < cost ? 'disabled' : ''}>${ICONS.medal}${cost}</button>
       </li>`;
     }).join('');
-    const threat = threatOf(save.meta);
-    const threatRow = `<p class="threat">威脅等級 <b>${threat.level}</b>
-      <span>殭屍血量 ×${threat.hp.toFixed(2)} · 勳章 ×${threat.medals.toFixed(1)}</span></p>`;
     this.show(`<div class="sheet shop">
       <p class="eyebrow">無限作戰 · 永久升級</p>
       <div class="shop-head"><h2 class="sheet-title">軍需處</h2>${medalBadge(save.medals)}</div>
-      ${threatRow}
       <ul class="upgrades">${rows}</ul>
       <div class="actions">
         <button class="btn btn-primary" data-action="endless">${ICONS.play}出擊</button>

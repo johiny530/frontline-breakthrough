@@ -156,18 +156,24 @@ describe('endless run', () => {
     const run = new EndlessRun({ troops: 2, intel: 3 }, 1);
     expect(run.count).toBe(17); // 12 * 1.2^2
     expect(run.rerolls).toBe(3);
-    expect(run.threat.level).toBe(5);
   });
 
-  it('permanent upgrades have no cap and raise the threat', () => {
+  it('new permanent upgrades: start picks, sector growth, medal gain', () => {
+    const run = new EndlessRun({ vanguard: 2, recruit: 10, loot: 5, demolition: 3 }, 1);
+    expect(run.pendingPicks).toBe(2);
+    expect(run.mods.sectorGrowth).toBeCloseTo(1.03 ** 10);
+    expect(run.mods.medalGain).toBeCloseTo(1.06 ** 5);
+    expect(run.mods.barrelDamage).toBeCloseTo(1.15 ** 3);
+    const st = run.createStage();
+    st.status = 'won';
+    run.finishSector(st);
+    expect(run.count).toBe(Math.round(st.squad.count * 1.03 ** 10));
+  });
+
+  it('permanent upgrades have no cap; fire rate past x3 turns into damage', () => {
     const run = new EndlessRun({ firepower: 40, drill: 40 }, 1);
-    expect(run.mods.fireInterval).toBeCloseTo(1 / 3); // fire rate capped at x3
-    expect(run.mods.damage).toBeGreaterThan(1.12 ** 40); // the rest becomes damage
-    expect(run.threat.hp).toBeCloseTo(1.025 ** 80);
-    const plain = generateSector(3, 7, 50);
-    const hard = generateSector(3, 7, 50, run.threat.hp);
-    const hp = (d: LevelDef) => d.items.reduce((a, it) => a + (it.kind === 'enemies' ? it.hp * it.count : 0), 0);
-    expect(hp(hard)).toBeGreaterThan(hp(plain) * 5);
+    expect(run.mods.fireInterval).toBeCloseTo(1 / 3);
+    expect(run.mods.damage).toBeGreaterThan(1.12 ** 40);
     expect(metaCost(META_UPGRADES[0], 10)).toBeGreaterThan(metaCost(META_UPGRADES[0], 9));
   });
 });

@@ -88,7 +88,8 @@ export function simulateAll(levels: LevelDef[]): string {
 }
 
 /** Perk preference of a player who knows the game (strongest first). */
-const SMART_PICKS = ['spread', 'heavy', 'rapid', 'hunter', 'armor', 'scope', 'reinforce', 'rescue', 'engineer', 'demolition'];
+const SMART_PICKS = ['spread', 'overdrive', 'heavy', 'rapid', 'hunter', 'armor', 'recruit', 'scope', 'reinforce', 'rescue',
+  'engineer', 'demolition', 'bounty'];
 
 export interface EndlessSimOptions {
   picks?: 'random' | 'smart'; // how perks are chosen
@@ -106,7 +107,16 @@ export function simulateEndless(runs: number, metaLevels: Record<string, number>
   for (let r = 0; r < runs; r++) {
     const run = new EndlessRun(metaLevels, 1000 + r);
     const trace: string[] = [];
+    const pick = () => {
+      while (run.pendingPicks > 0) {
+        const offer = run.offer();
+        const smart = [...offer].sort((a, b) => SMART_PICKS.indexOf(a.id) - SMART_PICKS.indexOf(b.id))[0];
+        run.take(opts.picks === 'smart' ? smart : offer[Math.floor(Math.random() * offer.length)]);
+        run.pendingPicks--;
+      }
+    };
     while (run.sector <= maxSectors) {
+      pick();
       const st = run.createStage();
       for (let f = 0; f < 60 * 240 && st.status === 'playing'; f++) {
         st.squad.targetX = steer ? bot.targetX(st) : 0;
@@ -118,12 +128,6 @@ export function simulateEndless(runs: number, metaLevels: Record<string, number>
       }
       if (!run.finishSector(st)) break;
       trace.push(`${run.sector - 1}:${run.count}`);
-      while (run.pendingPicks > 0) {
-        const offer = run.offer();
-        const smart = [...offer].sort((a, b) => SMART_PICKS.indexOf(a.id) - SMART_PICKS.indexOf(b.id))[0];
-        run.take(opts.picks === 'smart' ? smart : offer[Math.floor(Math.random() * offer.length)]);
-        run.pendingPicks--;
-      }
     }
     reached.push(run.sectorsCleared);
     lines.push(`run ${r + 1}: cleared ${run.sectorsCleared} sectors, score ${run.score}, medals ${run.medals} | ${trace.join(' ')}`);
