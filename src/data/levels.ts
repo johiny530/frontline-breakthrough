@@ -56,6 +56,7 @@ export interface LevelDef {
   items: ItemDef[];
   boss?: BossDef;
   speed?: number; // forward speed multiplier (default 1)
+  threat?: number; // endless: hp multiplier from permanent upgrades; contact losses ignore it (default 1)
 }
 
 // Small builders to keep the tables short.

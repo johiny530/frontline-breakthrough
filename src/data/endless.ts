@@ -53,30 +53,53 @@ export const RARITY_WEIGHT: Record<Rarity, number> = { common: 6, rare: 3, epic:
 export interface MetaUpgradeDef {
   id: string;
   name: string;
-  desc: string; // per level
-  maxLevel: number;
-  baseCost: number; // cost of level n+1 = baseCost * (n + 1)
+  desc: string; // what each level does
+  /** Current total effect at level lv, e.g. "傷害 ×1.40". */
+  effect: (lv: number) => string;
+  baseCost: number; // cost of level n+1 = baseCost * costGrowth^n
 }
 
+// Permanent upgrades have no level cap. Each level multiplies its stat, so the
+// bonus grows exponentially; every level bought also raises the threat level
+// (see threatOf), which multiplies enemy toughness and the medals earned.
+const fmt = (x: number) => (x >= 100 ? Math.round(x).toString() : x.toFixed(2).replace(/\.?0+$/, ''));
 export const META_UPGRADES: MetaUpgradeDef[] = [
-  { id: 'troops', name: '預備部隊', desc: '開局兵力 +5', maxLevel: 5, baseCost: 6 },
-  { id: 'firepower', name: '武器改良', desc: '子彈傷害 +10%', maxLevel: 5, baseCost: 8 },
-  { id: 'drill', name: '射擊訓練', desc: '射擊間隔 −6%', maxLevel: 5, baseCost: 8 },
-  { id: 'intel', name: '情報網', desc: '每局可重抽強化 +1 次', maxLevel: 3, baseCost: 12 },
-  { id: 'sapper', name: '工兵連', desc: '打閘門加值 +15%', maxLevel: 3, baseCost: 10 },
-  { id: 'medic', name: '醫護兵', desc: '被殭屍碰到的損失 −8%', maxLevel: 3, baseCost: 12 },
+  { id: 'troops', name: '預備部隊', desc: '開局兵力每級 ×1.2', effect: (lv) => `開局 ${troopsAt(lv)} 人`, baseCost: 6 },
+  { id: 'firepower', name: '武器改良', desc: '子彈傷害每級 ×1.12', effect: (lv) => `傷害 ×${fmt(1.12 ** lv)}`, baseCost: 8 },
+  { id: 'drill', name: '射擊訓練', desc: '射速每級 ×1.08', effect: (lv) => `射速 ×${fmt(1.08 ** lv)}`, baseCost: 8 },
+  { id: 'intel', name: '情報網', desc: '每局可重抽強化 +1 次', effect: (lv) => `重抽 ${lv} 次`, baseCost: 12 },
+  { id: 'sapper', name: '工兵連', desc: '打閘門加值每級 ×1.15', effect: (lv) => `閘門 ×${fmt(1.15 ** lv)}`, baseCost: 10 },
+  { id: 'medic', name: '醫護兵', desc: '被殭屍碰到的損失每級 ×0.92', effect: (lv) => `損失 ×${fmt(0.92 ** lv)}`, baseCost: 12 },
 ];
+
+export const META_COST_GROWTH = 1.45;
+export const metaCost = (u: MetaUpgradeDef, lv: number) => Math.round(u.baseCost * META_COST_GROWTH ** lv);
+const troopsAt = (lv: number) => Math.round(ENDLESS.startCount * 1.2 ** lv);
+
+/**
+ * Threat level = total permanent upgrade levels. Enemies, barrels and bosses get
+ * threatHp^T times tougher (slower than a single upgrade line grows, so buying
+ * still pays off), and medals are multiplied by 1 + threatMedals * T.
+ */
+export function threatOf(levels: Record<string, number>): { level: number; hp: number; medals: number } {
+  const level = Object.values(levels).reduce((a, b) => a + b, 0);
+  return { level, hp: ENDLESS.threatHp ** level, medals: 1 + ENDLESS.threatMedals * level };
+}
 
 /** Applies permanent upgrades to a fresh run. */
 export function metaStart(levels: Record<string, number>): { mods: RunMods; startCount: number; rerolls: number } {
   const lv = (id: string) => levels[id] ?? 0;
   const mods: RunMods = { ...IDENTITY_MODS };
-  mods.damage *= 1 + 0.1 * lv('firepower');
-  mods.fireInterval *= Math.pow(0.94, lv('drill'));
-  mods.gatePower *= 1 + 0.15 * lv('sapper');
-  mods.armor *= Math.pow(0.92, lv('medic'));
-  return { mods, startCount: ENDLESS.startCount + 5 * lv('troops'), rerolls: lv('intel') };
+  mods.damage *= 1.12 ** lv('firepower');
+  // Fire rate beyond FIRE_RATE_CAP turns into damage, so the shot count stays sane.
+  const rate = 1.08 ** lv('drill');
+  mods.fireInterval /= Math.min(rate, FIRE_RATE_CAP);
+  mods.damage *= Math.max(1, rate / FIRE_RATE_CAP);
+  mods.gatePower *= 1.15 ** lv('sapper');
+  mods.armor *= 0.92 ** lv('medic');
+  return { mods, startCount: troopsAt(lv('troops')), rerolls: lv('intel') };
 }
+const FIRE_RATE_CAP = 3;
 
 /** Difficulty curve for generated sectors (n = 1, 2, 3, ...). */
 export const ENDLESS = {
@@ -110,4 +133,7 @@ export const ENDLESS = {
   crateHp: 0.8, // x A
   bossHp: 20, // x A, +25% per boss tier
   bossDps: 0.04, // x A soldiers per second on contact
+  // Threat from permanent upgrades (see threatOf).
+  threatHp: 1.025,
+  threatMedals: 0.05,
 };

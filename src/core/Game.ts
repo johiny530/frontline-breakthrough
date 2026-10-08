@@ -7,7 +7,7 @@ import { World } from '../render/World';
 import { Hud } from '../ui/Hud';
 import { ICONS } from '../ui/icons';
 import { Screens, sectorCode } from '../ui/Screens';
-import { META_UPGRADES, type PerkDef } from '../data/endless';
+import { META_UPGRADES, metaCost, type PerkDef } from '../data/endless';
 import { EndlessRun } from './endless/EndlessRun';
 import { Bot, DEBUG, simulateAll } from './Debug';
 import { Input } from './Input';
@@ -288,8 +288,8 @@ export class Game {
   private buy(index: number): void {
     const u = META_UPGRADES[index];
     const lv = this.save.meta[u.id] ?? 0;
-    const cost = u.baseCost * (lv + 1);
-    if (lv >= u.maxLevel || this.save.medals < cost) return;
+    const cost = metaCost(u, lv);
+    if (this.save.medals < cost) return;
     this.save.medals -= cost;
     this.save.meta[u.id] = lv + 1;
     writeSave(this.save);

@@ -383,9 +383,12 @@ kbd {
 .u-body { display: flex; flex-direction: column; gap: 0.6cqw; min-width: 0; }
 .u-body b { font-family: var(--f-zh); font-size: 4cqw; }
 .u-body small { font-size: 3cqw; color: var(--muted); }
-.u-pips { display: flex; gap: 0.8cqw; }
-.u-pips i { width: 3.2cqw; height: 1.4cqw; background: rgba(23, 25, 15, 0.18); }
-.u-pips i.on { background: var(--olive-2); }
+.u-lv { font-family: var(--f-display, inherit); font-size: 3cqw; color: var(--olive-2); margin-left: 1cqw; }
+.u-effect { font-size: 3cqw; font-weight: 700; color: var(--olive-ink); }
+.threat { margin: 0; padding: 1.6cqw 2.4cqw; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6cqw 2cqw;
+  background: rgba(160, 40, 20, 0.1); border-left: 0.8cqw solid #a83a22; font-size: 3.4cqw; }
+.threat b { font-size: 4.4cqw; color: #a83a22; }
+.threat span { font-size: 3cqw; color: var(--muted); }
 .btn-buy { width: auto; min-width: 20cqw; padding: 2cqw 2.6cqw; font-size: 3.6cqw; }
 .btn-reset {
   align-self: center;

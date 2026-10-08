@@ -1,7 +1,7 @@
 import type { LevelDef } from '../data/levels';
 import { endlessUnlocked, type SaveData } from '../core/Storage';
 import type { EndlessRun } from '../core/endless/EndlessRun';
-import { META_UPGRADES, type PerkDef } from '../data/endless';
+import { META_UPGRADES, metaCost, threatOf, type PerkDef } from '../data/endless';
 import type { Stage } from '../core/Stage';
 import { CONFIG } from '../data/config';
 import { ICONS } from './icons';
@@ -124,18 +124,21 @@ export class Screens {
   shop(save: SaveData, confirmReset = false): void {
     const rows = META_UPGRADES.map((u, i) => {
       const lv = save.meta[u.id] ?? 0;
-      const maxed = lv >= u.maxLevel;
-      const cost = u.baseCost * (lv + 1);
-      const pips = Array.from({ length: u.maxLevel }, (_, k) => `<i class="${k < lv ? 'on' : ''}"></i>`).join('');
+      const cost = metaCost(u, lv);
       return `<li class="upgrade">
-        <div class="u-body"><b>${u.name}</b><small>${u.desc}</small><span class="u-pips">${pips}</span></div>
-        <button class="btn btn-buy${maxed ? '' : ' btn-primary'}" data-action="buy" data-arg="${i}"
-          ${maxed || save.medals < cost ? 'disabled' : ''}>${maxed ? '已滿級' : `${ICONS.medal}${cost}`}</button>
+        <div class="u-body"><b>${u.name} <span class="u-lv">Lv ${lv}</span></b><small>${u.desc}</small>
+          <span class="u-effect">${u.effect(lv)} → ${u.effect(lv + 1)}</span></div>
+        <button class="btn btn-buy btn-primary" data-action="buy" data-arg="${i}"
+          ${save.medals < cost ? 'disabled' : ''}>${ICONS.medal}${cost}</button>
       </li>`;
     }).join('');
+    const threat = threatOf(save.meta);
+    const threatRow = `<p class="threat">威脅等級 <b>${threat.level}</b>
+      <span>殭屍血量 ×${threat.hp.toFixed(2)} · 勳章 ×${threat.medals.toFixed(1)}</span></p>`;
     this.show(`<div class="sheet shop">
       <p class="eyebrow">無限作戰 · 永久升級</p>
       <div class="shop-head"><h2 class="sheet-title">軍需處</h2>${medalBadge(save.medals)}</div>
+      ${threatRow}
       <ul class="upgrades">${rows}</ul>
       <div class="actions">
         <button class="btn btn-primary" data-action="endless">${ICONS.play}出擊</button>

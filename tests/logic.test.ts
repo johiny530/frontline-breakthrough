@@ -7,7 +7,7 @@ import { Enemy } from '../src/entities/Enemy';
 import { updateCombat } from '../src/systems/combat';
 import { generateSector } from '../src/core/endless/Generator';
 import { EndlessRun } from '../src/core/endless/EndlessRun';
-import { IDENTITY_MODS, PERKS } from '../src/data/endless';
+import { IDENTITY_MODS, META_UPGRADES, metaCost, PERKS } from '../src/data/endless';
 import { endlessUnlocked, loadSave } from '../src/core/Storage';
 
 const sum = (tiers: number[]) => tiers.reduce((a, t) => a + tierValue(t), 0);
@@ -154,8 +154,21 @@ describe('endless run', () => {
 
   it('permanent upgrades change the starting run', () => {
     const run = new EndlessRun({ troops: 2, intel: 3 }, 1);
-    expect(run.count).toBe(22);
+    expect(run.count).toBe(17); // 12 * 1.2^2
     expect(run.rerolls).toBe(3);
+    expect(run.threat.level).toBe(5);
+  });
+
+  it('permanent upgrades have no cap and raise the threat', () => {
+    const run = new EndlessRun({ firepower: 40, drill: 40 }, 1);
+    expect(run.mods.fireInterval).toBeCloseTo(1 / 3); // fire rate capped at x3
+    expect(run.mods.damage).toBeGreaterThan(1.12 ** 40); // the rest becomes damage
+    expect(run.threat.hp).toBeCloseTo(1.025 ** 80);
+    const plain = generateSector(3, 7, 50);
+    const hard = generateSector(3, 7, 50, run.threat.hp);
+    const hp = (d: LevelDef) => d.items.reduce((a, it) => a + (it.kind === 'enemies' ? it.hp * it.count : 0), 0);
+    expect(hp(hard)).toBeGreaterThan(hp(plain) * 5);
+    expect(metaCost(META_UPGRADES[0], 10)).toBeGreaterThan(metaCost(META_UPGRADES[0], 9));
   });
 });
 

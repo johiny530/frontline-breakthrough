@@ -8,9 +8,11 @@ import { clamp, mulberry32 } from '../math';
  * barrels...). Numbers scale with the army entering the sector, times a
  * pressure that grows each sector, so a snowballing army still meets a
  * matching threat and perks decide how long the run lasts.
+ * `threat` (from permanent upgrades) multiplies every hp on the road
+ * (contact losses ignore it, see contacts.ts).
  * Deterministic for a given seed, sector and army size.
  */
-export function generateSector(n: number, seed: number, startSoldiers: number): LevelDef {
+export function generateSector(n: number, seed: number, startSoldiers: number, threat = 1): LevelDef {
   const E = ENDLESS;
   const rand = mulberry32(seed * 7919 + n * 104729);
   const pick = <T>(xs: T[]): T => xs[Math.floor(rand() * xs.length)];
@@ -24,7 +26,7 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
 
   /** A wave worth `scale` of the standard threat, as bodies x hp. */
   const wave = (at: number, x: number, scale: number, spread: number, toughness = 1, type: EnemyType = 'walker'): ItemDef => {
-    const totalHp = A * pressure * scale * between(0.85, 1.15);
+    const totalHp = A * pressure * threat * scale * between(0.85, 1.15);
     const lo = type === 'brute' ? 3 : minBodies * scale;
     const bodies = Math.round(clamp((20 + 6 * n) * scale / toughness, lo, maxBodies * scale));
     const hp = Math.max(1, Math.ceil(totalHp / Math.max(1, bodies)));
@@ -34,7 +36,7 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
   const perHit = gateMax / 60;
   const goodGate = () => Math.round(A * E.gateGood * between(0.8, 1.2) + 4);
   const badGate = () => -Math.round(A * E.gateBad * between(0.8, 1.2) + 5);
-  const barrelHp = (scale: number) => Math.round(A * E.barrelHp * scale + 15);
+  const barrelHp = (scale: number) => Math.round((A * E.barrelHp * scale + 15) * threat);
   const reward = (scale: number) => Math.round((A * E.barrelReward + 5) * scale * between(0.8, 1.2));
 
   const items: ItemDef[] = [];
@@ -119,7 +121,7 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
 
   // Supply crate: a tough box in one lane that grants a random perk.
   if (rand() < E.crateChance) {
-    items.push({ kind: 'barrel', at: between(35, length - 30), x: lx(side()), hp: Math.round(A * E.crateHp + 20), reward: 0, crate: true });
+    items.push({ kind: 'barrel', at: between(35, length - 30), x: lx(side()), hp: Math.round((A * E.crateHp + 20) * threat), reward: 0, crate: true });
   }
 
   const tier = n / E.bossEvery;
@@ -128,9 +130,10 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
     length,
     speed: Math.min(E.speedMax, E.speedBase + E.speedGrowth * n),
     startSoldiers,
+    threat,
     items: items.sort((a, b) => a.at - b.at),
     boss: isBoss
-      ? { hp: Math.round(A * E.bossHp * (1 + 0.25 * (tier - 1))), speed: 1 + 0.1 * tier, contactDps: Math.round(A * E.bossDps * (1 + 0.2 * tier) + 5) }
+      ? { hp: Math.round(A * E.bossHp * (1 + 0.25 * (tier - 1)) * threat), speed: 1 + 0.1 * tier, contactDps: Math.round(A * E.bossDps * (1 + 0.2 * tier) + 5) }
       : undefined,
   };
 }
