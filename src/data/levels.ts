@@ -51,6 +51,7 @@ export interface BossDef {
 
 export interface LevelDef {
   name: string;
+  nameEn?: string; // English name (falls back to name)
   length: number;
   startSoldiers: number;
   items: ItemDef[];
@@ -69,6 +70,7 @@ const enemies = (at: number, x: number, count: number, hp = 1, spread = 3.2): En
 export const LEVELS: LevelDef[] = [
   {
     name: '沙漠公路',
+    nameEn: 'Desert Highway',
     length: 150,
     startSoldiers: 10,
     items: [
@@ -83,6 +85,7 @@ export const LEVELS: LevelDef[] = [
   },
   {
     name: '廢棄檢查站',
+    nameEn: 'Abandoned Checkpoint',
     length: 170,
     startSoldiers: 10,
     items: [
@@ -98,6 +101,7 @@ export const LEVELS: LevelDef[] = [
   },
   {
     name: '前線補給線',
+    nameEn: 'Supply Line',
     length: 190,
     startSoldiers: 12,
     items: [
@@ -115,6 +119,7 @@ export const LEVELS: LevelDef[] = [
   },
   {
     name: '焦土峽谷',
+    nameEn: 'Scorched Canyon',
     length: 210,
     startSoldiers: 12,
     items: [
@@ -133,6 +138,7 @@ export const LEVELS: LevelDef[] = [
   },
   {
     name: '最終突破',
+    nameEn: 'Final Push',
     length: 200,
     startSoldiers: 15,
     items: [

@@ -6,6 +6,8 @@ https://johiny530.github.io/frontline-breakthrough/
 
 電腦和手機的瀏覽器都能玩，不用下載安裝。
 
+遊戲有中文和英文兩種語言，主選單最下面可以切換。*English is available: tap "English" at the bottom of the main menu.*
+
 <img src="docs/screenshot.jpg" alt="遊戲畫面：上千人的部隊衝向殭屍群" width="320">
 
 帶著部隊衝過殭屍佔領的沙漠公路。射擊閘門讓數字變大，打破木桶救出同伴，用人數淹沒擋在前面的殭屍。
@@ -60,6 +62,20 @@ https://johiny530.github.io/frontline-breakthrough/
 ## 存檔
 
 進度存在你自己的瀏覽器裡，不會上傳到任何地方。換一台裝置、換一個瀏覽器，或清除網站資料之後，進度會重新開始；無痕視窗不會保存進度。
+
+## English
+
+**Play:** https://johiny530.github.io/frontline-breakthrough/ (switch the language with the button at the bottom of the main menu)
+
+Lead your squad down a zombie-infested desert highway. Your soldiers fire on their own; you only steer.
+
+- **Gates**: blue adds troops, red removes them, "×" multiplies. Shooting a gate raises its number, even a red one
+- **Barrels**: the number is their hp. Break them to free the soldiers standing on top; ramming them costs troops
+- **Zombies**: each one that reaches you takes soldiers with it, more for tougher zombies
+- **Ranks**: every 10 units of a rank merge into one of the next rank; the number above your squad is always the total
+- **Endless Ops** (unlocks after OP-05): random sectors that get harder the further you go, a perk card after each sector, a boss every 5 sectors, and medals to spend on uncapped permanent upgrades in the Armory
+
+Progress is saved in your own browser only.
 
 ## 致謝
 

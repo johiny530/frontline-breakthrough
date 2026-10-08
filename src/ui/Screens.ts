@@ -1,7 +1,8 @@
 import type { LevelDef } from '../data/levels';
 import { endlessUnlocked, type SaveData } from '../core/Storage';
 import type { EndlessRun } from '../core/endless/EndlessRun';
-import { META_UPGRADES, metaCost, type PerkDef } from '../data/endless';
+import { descOf, META_UPGRADES, metaCost, nameOf, type PerkDef } from '../data/endless';
+import { lang, t } from '../i18n';
 import type { Stage } from '../core/Stage';
 import { CONFIG } from '../data/config';
 import { ICONS } from './icons';
@@ -13,24 +14,27 @@ export const opCode = (index: number): string => `OP-${String(index + 1).padStar
 /** Endless sectors are labelled "SECTOR 07". */
 export const sectorCode = (n: number): string => `SECTOR ${String(n).padStart(2, '0')}`;
 
-const RARITY_LABEL = { common: '一般', rare: '稀有', epic: '史詩' } as const;
+const rarityLabel = (r: PerkDef['rarity']) => ({ common: t('一般', 'Common'), rare: t('稀有', 'Rare'), epic: t('史詩', 'Epic') })[r];
+
+/** Localized stage name. */
+export const stageName = (def: LevelDef): string => t(def.name, def.nameEn ?? def.name);
 
 const medalBadge = (n: number) => `<span class="medals">${ICONS.medal}<b>${n}</b></span>`;
 
 /** Owned perks as compact chips (pause screen, run summary). */
 function perkChips(run: EndlessRun): string {
   const owned = run.owned();
-  if (!owned.length) return '<p class="muted">尚未取得強化</p>';
+  if (!owned.length) return `<p class="muted">${t('尚未取得強化', 'No perks yet')}</p>`;
   return `<ul class="chips">${owned.map(({ perk, level }) =>
-    `<li class="chip r-${perk.rarity}">${perk.name}${perk.maxLevel > 1 ? ` <b>${level}</b>` : ''}</li>`).join('')}</ul>`;
+    `<li class="chip r-${perk.rarity}">${nameOf(perk)}${perk.maxLevel > 1 ? ` <b>${level}</b>` : ''}</li>`).join('')}</ul>`;
 }
 
-const LOGO = `
+const logo = () => `
   <h1 class="logo">
     <span class="logo-top">FRONTLINE</span>
     <span class="logo-band"><span>BREAKTHROUGH</span></span>
   </h1>
-  <p class="logo-zh">前線突破</p>`;
+  ${lang === 'zh' ? '<p class="logo-zh">前線突破</p>' : ''}`;
 
 /** Full-screen overlays: loading, mission select, pause, results. */
 export class Screens {
@@ -73,11 +77,11 @@ export class Screens {
   loading(done: number, total: number): void {
     const pct = Math.round((done / Math.max(1, total)) * 100);
     this.show(`<div class="menu">
-      <header class="brand">${LOGO}</header>
+      <header class="brand">${logo()}</header>
       <div class="loadbar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
         <div class="loadbar-fill" style="width:${pct}%"></div>
       </div>
-      <p class="loadtext">部署部隊中 ${done}/${total}</p>
+      <p class="loadtext">${t('部署部隊中', 'Deploying troops')} ${done}/${total}</p>
     </div>`, 'menu');
   }
 
@@ -90,47 +94,48 @@ export class Screens {
       const side = locked
         ? `<span class="m-lock">${ICONS.lock}</span>`
         : save.best[i]
-          ? `<span class="m-best"><small>最高</small>${save.best[i]}</span>`
-          : `<span class="m-new">待命</span>`;
+          ? `<span class="m-best"><small>${t('最高', 'Best')}</small>${save.best[i]}</span>`
+          : `<span class="m-new">${t('待命', 'Ready')}</span>`;
       return `<li><button class="mission" data-action="play" data-arg="${i}" ${locked ? 'disabled' : ''}
-          aria-label="${opCode(i)} ${lv.name}${locked ? '（未解鎖）' : ''}">
+          aria-label="${opCode(i)} ${stageName(lv)}${locked ? t('（未解鎖）', ' (locked)') : ''}">
         <span class="op">${opCode(i)}</span>
         <span class="m-body">
-          <span class="m-name">${lv.name}${lv.boss ? '<em class="tag-boss">BOSS</em>' : ''}</span>
-          <span class="threat" title="威脅等級 ${i + 1}/5">${threat}</span>
+          <span class="m-name">${stageName(lv)}${lv.boss ? '<em class="tag-boss">BOSS</em>' : ''}</span>
+          <span class="threat" title="${t('威脅等級', 'Threat')} ${i + 1}/5">${threat}</span>
         </span>
         ${side}
       </button></li>`;
     }).join('');
     this.show(`<div class="menu">
       <header class="brand">
-        <p class="eyebrow">沙漠戰區 · 作戰簡報</p>
-        ${LOGO}
+        <p class="eyebrow">${t('沙漠戰區 · 作戰簡報', 'DESERT SECTOR · BRIEFING')}</p>
+        ${logo()}
       </header>
       <ol class="missions">${items}</ol>
       ${this.endlessCard(save)}
       <footer class="menu-foot">
-        <div class="merit"><span>戰功總計</span><b>${total}</b></div>
-        <p class="keys"><kbd>←</kbd><kbd>→</kbd> 或拖曳移動　<kbd>Esc</kbd> 暫停</p>
+        <div class="merit"><span>${t('戰功總計', 'Total merit')}</span><b>${total}</b></div>
+        <p class="keys"><kbd>←</kbd><kbd>→</kbd> ${t('或拖曳移動', 'or drag to steer')}　<kbd>Esc</kbd> ${t('暫停', 'pause')}
+        <button class="lang-btn" data-action="lang" aria-label="${t('Switch to English', '切換成中文')}">${t('English', '中文')}</button></p>
       </footer>
     </div>`, 'menu');
   }
 
   private endlessCard(save: SaveData): string {
     if (!endlessUnlocked(save)) {
-      return `<div class="endless locked">${ICONS.lock}<span><b>無限作戰</b><small>打通 OP-05 後解鎖</small></span></div>`;
+      return `<div class="endless locked">${ICONS.lock}<span><b>${t('無限作戰', 'Endless Ops')}</b><small>${t('打通 OP-05 後解鎖', 'Clear OP-05 to unlock')}</small></span></div>`;
     }
     const rec = save.endless;
     return `<div class="endless">
       <div class="endless-head">
         <span class="op">∞</span>
-        <span class="m-body"><span class="m-name">無限作戰</span>
-          <small>最遠 ${rec.sector} 段 · 最高 ${rec.score}</small></span>
+        <span class="m-body"><span class="m-name">${t('無限作戰', 'Endless Ops')}</span>
+          <small>${t(`最遠 ${rec.sector} 段 · 最高 ${rec.score}`, `Furthest ${rec.sector} · Best ${rec.score}`)}</small></span>
         ${medalBadge(save.medals)}
       </div>
       <div class="endless-actions">
-        <button class="btn btn-primary" data-action="endless">${ICONS.play}出擊</button>
-        <button class="btn" data-action="shop">${ICONS.medal}軍需處</button>
+        <button class="btn btn-primary" data-action="endless">${ICONS.play}${t('出擊', 'Deploy')}</button>
+        <button class="btn" data-action="shop">${ICONS.medal}${t('軍需處', 'Armory')}</button>
       </div>
     </div>`;
   }
@@ -141,22 +146,22 @@ export class Screens {
       const lv = save.meta[u.id] ?? 0;
       const cost = metaCost(u, lv);
       return `<li class="upgrade">
-        <div class="u-body"><b>${u.name} <span class="u-lv">Lv ${lv}</span></b><small>${u.desc}</small>
+        <div class="u-body"><b>${nameOf(u)} <span class="u-lv">Lv ${lv}</span></b><small>${descOf(u)}</small>
           <span class="u-effect">${u.effect(lv)} → ${u.effect(lv + 1)}</span></div>
         <button class="btn btn-buy btn-primary" data-action="buy" data-arg="${i}"
           ${save.medals < cost ? 'disabled' : ''}>${ICONS.medal}${cost}</button>
       </li>`;
     }).join('');
     this.show(`<div class="sheet shop">
-      <p class="eyebrow">無限作戰 · 永久升級</p>
-      <div class="shop-head"><h2 class="sheet-title">軍需處</h2>${medalBadge(save.medals)}</div>
+      <p class="eyebrow">${t('無限作戰 · 永久升級', 'ENDLESS OPS · PERMANENT UPGRADES')}</p>
+      <div class="shop-head"><h2 class="sheet-title">${t('軍需處', 'Armory')}</h2>${medalBadge(save.medals)}</div>
       <ul class="upgrades">${rows}</ul>
       <div class="actions">
-        <button class="btn btn-primary" data-action="endless">${ICONS.play}出擊</button>
-        <button class="btn" data-action="menu">${ICONS.list}任務選單</button>
+        <button class="btn btn-primary" data-action="endless">${ICONS.play}${t('出擊', 'Deploy')}</button>
+        <button class="btn" data-action="menu">${ICONS.list}${t('任務選單', 'Missions')}</button>
       </div>
       <button class="btn-reset${confirmReset ? ' armed' : ''}" data-action="${confirmReset ? 'resetConfirm' : 'resetAsk'}">
-        ${confirmReset ? '確定清除？再按一次（無法復原）' : '重置無限模式進度'}
+        ${confirmReset ? t('確定清除？再按一次（無法復原）', 'Sure? Tap again to erase (cannot be undone)') : t('重置無限模式進度', 'Reset endless progress')}
       </button>
     </div>`, 'dim');
   }
@@ -166,51 +171,51 @@ export class Screens {
     const cards = offer.map((p, i) => {
       const lv = run.level(p);
       return `<button class="perk r-${p.rarity}" data-action="perk" data-arg="${i}">
-        <span class="perk-rarity"><kbd>${i + 1}</kbd>${RARITY_LABEL[p.rarity]}</span>
-        <span class="perk-name">${p.name}</span>
-        <span class="perk-desc">${p.desc}</span>
-        <span class="perk-level">${p.maxLevel > 1 && p.maxLevel < 99 ? `等級 ${lv} → ${lv + 1}` : ''}</span>
+        <span class="perk-rarity"><kbd>${i + 1}</kbd>${rarityLabel(p.rarity)}</span>
+        <span class="perk-name">${nameOf(p)}</span>
+        <span class="perk-desc">${descOf(p)}</span>
+        <span class="perk-level">${p.maxLevel > 1 && p.maxLevel < 99 ? `${t('等級', 'Level')} ${lv} → ${lv + 1}` : ''}</span>
       </button>`;
     }).join('');
     this.show(`<div class="perk-select">
-      <p class="eyebrow">${sectorCode(run.sector - 1)} 突破 · 兵力 ${run.count}</p>
+      <p class="eyebrow">${run.sectorsCleared === 0 ? t('出擊準備', 'PRE-DEPLOYMENT') : `${sectorCode(run.sector - 1)} ${t('突破', 'CLEARED')}`} · ${t('兵力', 'ARMY')} ${run.count}</p>
       <h2 class="perk-title">${title}</h2>
       <div class="perk-cards">${cards}</div>
-      <button class="btn btn-reroll" data-action="reroll" ${run.rerolls > 0 ? '' : 'disabled'}>${ICONS.retry}重抽（剩 ${run.rerolls} 次）</button>
+      <button class="btn btn-reroll" data-action="reroll" ${run.rerolls > 0 ? '' : 'disabled'}>${ICONS.retry}${t(`重抽（剩 ${run.rerolls} 次）`, `Reroll (${run.rerolls} left)`)}</button>
     </div>`, 'menu');
   }
 
   runOver(run: EndlessRun, earned: number, record: boolean): void {
     this.show(`<div class="sheet lost">
-      <div class="stamp">作戰結束</div>
-      <p class="eyebrow">無限作戰</p>
+      <div class="stamp">${t('作戰結束', 'RUN OVER')}</div>
+      <p class="eyebrow">${t('無限作戰', 'ENDLESS OPS')}</p>
       <h2 class="sheet-title">${sectorCode(run.sector)}</h2>
       <table class="ledger">
-        <tr><th>突破段數</th><td class="calc"></td><td>${run.sectorsCleared}</td></tr>
-        <tr><th>擊敗 Boss</th><td class="calc"></td><td>${run.bossesKilled}</td></tr>
-        <tr><th>擊殺</th><td class="calc"></td><td>${run.kills}</td></tr>
-        <tr class="sum"><th>總戰功</th><td class="calc"></td><td>${run.score}</td></tr>
+        <tr><th>${t('突破段數', 'Sectors cleared')}</th><td class="calc"></td><td>${run.sectorsCleared}</td></tr>
+        <tr><th>${t('擊敗 Boss', 'Bosses killed')}</th><td class="calc"></td><td>${run.bossesKilled}</td></tr>
+        <tr><th>${t('擊殺', 'Kills')}</th><td class="calc"></td><td>${run.kills}</td></tr>
+        <tr class="sum"><th>${t('總戰功', 'Total merit')}</th><td class="calc"></td><td>${run.score}</td></tr>
       </table>
-      ${record ? '<p class="record">新紀錄</p>' : ''}
-      <p class="earned">獲得勳章 ${medalBadge(earned)}</p>
+      ${record ? `<p class="record">${t('新紀錄', 'NEW RECORD')}</p>` : ''}
+      <p class="earned">${t('獲得勳章', 'Medals earned')} ${medalBadge(earned)}</p>
       ${perkChips(run)}
       <div class="actions">
-        <button class="btn btn-primary" data-action="endless">${ICONS.retry}再出擊</button>
-        <button class="btn" data-action="shop">${ICONS.medal}軍需處</button>
-        <button class="btn" data-action="menu">${ICONS.list}任務選單</button>
+        <button class="btn btn-primary" data-action="endless">${ICONS.retry}${t('再出擊', 'Deploy again')}</button>
+        <button class="btn" data-action="shop">${ICONS.medal}${t('軍需處', 'Armory')}</button>
+        <button class="btn" data-action="menu">${ICONS.list}${t('任務選單', 'Missions')}</button>
       </div>
     </div>`, 'dim');
   }
 
   pause(st: Stage, run: EndlessRun | null = null): void {
     this.show(`<div class="sheet">
-      <p class="eyebrow">${run ? `無限作戰 · ${sectorCode(run.sector)}` : `${opCode(st.index)} · ${st.def.name}`}</p>
-      <h2 class="sheet-title">暫停</h2>
+      <p class="eyebrow">${run ? `${t('無限作戰', 'ENDLESS OPS')} · ${sectorCode(run.sector)}` : `${opCode(st.index)} · ${stageName(st.def)}`}</p>
+      <h2 class="sheet-title">${t('暫停', 'Paused')}</h2>
       ${run ? perkChips(run) : ''}
       <div class="actions">
-        <button class="btn btn-primary" data-action="resume">${ICONS.play}繼續作戰</button>
-        <button class="btn" data-action="retry">${ICONS.retry}重新開始</button>
-        <button class="btn" data-action="menu">${ICONS.list}任務選單</button>
+        <button class="btn btn-primary" data-action="resume">${ICONS.play}${t('繼續作戰', 'Resume')}</button>
+        <button class="btn" data-action="retry">${ICONS.retry}${t('重新開始', 'Restart')}</button>
+        <button class="btn" data-action="menu">${ICONS.list}${t('任務選單', 'Missions')}</button>
       </div>
     </div>`, 'dim');
   }
@@ -220,25 +225,25 @@ export class Screens {
     const s = st.score;
     const body = won
       ? `<table class="ledger">
-          <tr><th>擊殺</th><td class="calc">${s.kills} × ${CONFIG.score.kill}</td><td>${s.kills * CONFIG.score.kill}</td></tr>
-          <tr><th>打爆木桶</th><td class="calc"></td><td>${s.barrelPoints}</td></tr>
-          <tr><th>生還士兵</th><td class="calc">${st.squad.count} × ${CONFIG.score.survivor}</td><td>${s.survivorBonus}</td></tr>
-          <tr class="sum"><th>本關戰功</th><td class="calc"></td><td>${st.total}</td></tr>
+          <tr><th>${t('擊殺', 'Kills')}</th><td class="calc">${s.kills} × ${CONFIG.score.kill}</td><td>${s.kills * CONFIG.score.kill}</td></tr>
+          <tr><th>${t('打爆木桶', 'Barrels')}</th><td class="calc"></td><td>${s.barrelPoints}</td></tr>
+          <tr><th>${t('生還士兵', 'Survivors')}</th><td class="calc">${st.squad.count} × ${CONFIG.score.survivor}</td><td>${s.survivorBonus}</td></tr>
+          <tr class="sum"><th>${t('本關戰功', 'Mission merit')}</th><td class="calc"></td><td>${st.total}</td></tr>
         </table>
-        ${isBest ? '<p class="record">新紀錄</p>' : ''}`
-      : `<p class="debrief">部隊全數陣亡，擊殺 ${s.kills} 隻殭屍。<br>多搶加兵閘門，先打爆擋路的木桶。</p>`;
+        ${isBest ? `<p class="record">${t('新紀錄', 'NEW RECORD')}</p>` : ''}`
+      : `<p class="debrief">${t(`部隊全數陣亡，擊殺 ${s.kills} 隻殭屍。<br>多搶加兵閘門，先打爆擋路的木桶。`, `Your squad was wiped out after ${s.kills} kills.<br>Grab more troop gates and break the barrels in your way.`)}</p>`;
     const next = won && hasNext
-      ? `<button class="btn btn-primary" data-action="play" data-arg="${st.index + 1}">${ICONS.play}下一個任務 ${opCode(st.index + 1)}</button>`
+      ? `<button class="btn btn-primary" data-action="play" data-arg="${st.index + 1}">${ICONS.play}${t('下一個任務', 'Next mission')} ${opCode(st.index + 1)}</button>`
       : '';
-    const retry = `<button class="btn${next ? '' : ' btn-primary'}" data-action="retry">${ICONS.retry}再打一次</button>`;
+    const retry = `<button class="btn${next ? '' : ' btn-primary'}" data-action="retry">${ICONS.retry}${t('再打一次', 'Try again')}</button>`;
     this.show(`<div class="sheet ${won ? 'won' : 'lost'}">
-      <div class="stamp">${won ? '任務完成' : '任務失敗'}</div>
-      <p class="eyebrow">${opCode(st.index)} · ${st.def.name}</p>
+      <div class="stamp">${won ? t('任務完成', 'COMPLETE') : t('任務失敗', 'FAILED')}</div>
+      <p class="eyebrow">${opCode(st.index)} · ${stageName(st.def)}</p>
       <h2 class="sheet-title">${won ? 'MISSION COMPLETE' : 'MISSION FAILED'}</h2>
       ${body}
       <div class="actions">
         ${next}${retry}
-        <button class="btn" data-action="menu">${ICONS.list}任務選單</button>
+        <button class="btn" data-action="menu">${ICONS.list}${t('任務選單', 'Missions')}</button>
       </div>
     </div>`, 'dim');
   }

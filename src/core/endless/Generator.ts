@@ -125,6 +125,7 @@ export function generateSector(n: number, seed: number, startSoldiers: number): 
   const tier = n / E.bossEvery;
   return {
     name: isBoss ? `第 ${n} 段・Boss` : `第 ${n} 段`,
+    nameEn: isBoss ? `Sector ${n} · Boss` : `Sector ${n}`,
     length,
     speed: Math.min(E.speedMax, E.speedBase + E.speedGrowth * n),
     startSoldiers,

@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { stageName } from './Screens';
 import type { Stage } from '../core/Stage';
 import { ICONS } from './icons';
 import { opCode } from './Screens';
@@ -36,13 +38,20 @@ export class Hud {
       <div class="toast hidden" data-id="toast"></div>
       <div class="hint hidden" data-id="hint">
         <div class="hint-arrows">${ICONS.chevron}<span class="hint-dot"></span>${ICONS.chevron}</div>
-        <p><b>左右拖曳</b>（或按 ← →）移動部隊</p>
-        <p>射擊<b>藍色閘門</b>讓數字變大再穿過去</p>
+        <div data-id="hintText"></div>
       </div>
-      <button class="icon-btn btn-pause" aria-label="暫停">${ICONS.pause}</button>`;
+      <button class="icon-btn btn-pause">${ICONS.pause}</button>`;
     parent.appendChild(this.el);
     this.q = (id) => this.el.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
     this.el.querySelector('.btn-pause')!.addEventListener('click', onPause);
+  }
+
+  /** Texts that depend on the language, refreshed at each stage start. */
+  private localize(): void {
+    this.q('hintText').innerHTML = t(
+      '<p><b>左右拖曳</b>（或按 ← →）移動部隊</p><p>射擊<b>藍色閘門</b>讓數字變大再穿過去</p>',
+      '<p><b>Drag left/right</b> (or ← →) to steer</p><p>Shoot <b>blue gates</b> to raise them, then walk through</p>');
+    this.el.querySelector('.btn-pause')!.setAttribute('aria-label', t('暫停', 'Pause'));
   }
 
   show(visible: boolean): void {
@@ -55,10 +64,11 @@ export class Hud {
     this.lastScore = -1;
     this.scoreOffset = scoreOffset;
     this.q('op').textContent = code;
-    this.q('name').textContent = st.def.name;
+    this.q('name').textContent = stageName(st.def);
+    this.localize();
     this.q('routeEnd').innerHTML = st.def.boss ? ICONS.skull : '';
     this.q('routeEnd').classList.toggle('is-boss', !!st.def.boss);
-    this.banner(`<small>${code}</small>${st.def.name}<em>突破防線</em>`, 'banner-start');
+    this.banner(`<small>${code}</small>${stageName(st.def)}<em>${t('突破防線', 'BREAK THROUGH')}</em>`, 'banner-start');
   }
 
   update(st: Stage): void {
@@ -82,7 +92,7 @@ export class Hud {
       this.q('bossHp').textContent = `${Math.max(0, Math.ceil(boss.hp))}`;
       if (!this.bossSeen) {
         this.bossSeen = true;
-        this.banner('<small>WARNING</small>巨型殭屍接近<em>集中火力</em>', 'banner-boss');
+        this.banner(`<small>WARNING</small>${t('巨型殭屍接近', 'GIANT INCOMING')}<em>${t('集中火力', 'FOCUS FIRE')}</em>`, 'banner-boss');
       }
     }
   }

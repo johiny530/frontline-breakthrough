@@ -7,7 +7,8 @@ import { World } from '../render/World';
 import { Hud } from '../ui/Hud';
 import { ICONS } from '../ui/icons';
 import { Screens, sectorCode } from '../ui/Screens';
-import { META_UPGRADES, metaCost, type PerkDef } from '../data/endless';
+import { descOf, META_UPGRADES, metaCost, nameOf, type PerkDef } from '../data/endless';
+import { lang, setLang, t } from '../i18n';
 import { EndlessRun } from './endless/EndlessRun';
 import { Bot, DEBUG, simulateAll } from './Debug';
 import { Input } from './Input';
@@ -62,18 +63,21 @@ export class Game {
     });
   }
 
+  private renderSound: (() => void) | null = null;
+
   private makeSoundToggle(ui: HTMLElement): void {
     const btn = document.createElement('button');
     btn.className = 'icon-btn btn-sound';
     const render = () => {
       btn.innerHTML = this.audio.muted ? ICONS.soundOff : ICONS.soundOn;
-      btn.setAttribute('aria-label', this.audio.muted ? '開啟聲音' : '關閉聲音');
+      btn.setAttribute('aria-label', this.audio.muted ? t('開啟聲音', 'Sound on') : t('關閉聲音', 'Sound off'));
     };
     btn.addEventListener('click', () => {
       this.audio.toggleMute();
       render();
     });
     render();
+    this.renderSound = render;
     ui.appendChild(btn);
   }
 
@@ -180,7 +184,7 @@ export class Game {
 
   private refreshPerks(): void {
     this.hud.setPerks(this.run
-      ? this.run.owned().map(({ perk, level }) => ({ name: perk.name, level, rarity: perk.rarity }))
+      ? this.run.owned().map(({ perk, level }) => ({ name: nameOf(perk), level, rarity: perk.rarity }))
       : []);
   }
 
@@ -190,7 +194,7 @@ export class Game {
       if (ev.type !== 'crateBreak') continue;
       const { perk, added } = this.run!.takeRandom(st.squad.count);
       st.squad.add(added, ev.barrel.x, ev.barrel.z);
-      this.hud.toast(`<small>補給箱</small>${perk.name}<em>${perk.desc}</em>`);
+      this.hud.toast(`<small>${t('補給箱', 'SUPPLY CRATE')}</small>${nameOf(perk)}<em>${descOf(perk)}</em>`);
       this.audio.perk();
       this.refreshPerks();
     }
@@ -275,7 +279,11 @@ export class Game {
     const run = this.run!;
     this.mode = 'perk';
     this.offer = run.offer();
-    const title = run.sectorsCleared === 0 ? `出擊前補給（還有 ${run.pendingPicks} 次）` : run.pendingPicks > 1 ? `擊敗 Boss！選擇強化（還有 ${run.pendingPicks} 次）` : '選擇強化';
+    const title = run.sectorsCleared === 0
+      ? t(`出擊前補給（還有 ${run.pendingPicks} 次）`, `Pre-deployment supplies (${run.pendingPicks} left)`)
+      : run.pendingPicks > 1
+        ? t(`擊敗 Boss！選擇強化（還有 ${run.pendingPicks} 次）`, `Boss down! Choose a perk (${run.pendingPicks} left)`)
+        : t('選擇強化', 'Choose a perk');
     this.screens.perks(run, this.offer, title);
   }
 
@@ -363,6 +371,11 @@ export class Game {
         }
         break;
       case 'menu': this.abandonRun(); this.showMenu(); break;
+      case 'lang':
+        setLang(lang === 'zh' ? 'en' : 'zh');
+        this.renderSound?.();
+        this.showMenu();
+        break;
       case 'resume':
         this.mode = 'playing';
         this.screens.hide();
