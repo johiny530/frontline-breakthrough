@@ -332,6 +332,8 @@ export class Game {
         else if (this.stage) this.play(this.stage.index);
         break;
       case 'endless': this.startEndless(); break;
+      // Secret logo taps (see Screens): starts endless even while it is locked.
+      case 'testEndless': if (this.mode === 'menu') this.startEndless(); break;
       case 'shop': this.abandonRun(); this.showShop(); break;
       case 'buy': this.buy(arg); break;
       case 'resetAsk': this.screens.shop(this.save, true); break;

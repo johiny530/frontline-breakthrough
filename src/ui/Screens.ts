@@ -35,11 +35,23 @@ const LOGO = `
 /** Full-screen overlays: loading, mission select, pause, results. */
 export class Screens {
   private el = document.createElement('div');
+  private logoTaps: number[] = [];
 
   constructor(parent: HTMLElement, private onAction: Handler) {
     this.el.className = 'screen hidden';
     parent.appendChild(this.el);
     this.el.addEventListener('click', (e) => {
+      // Undocumented test entry: tap the logo 7 times within 3 s to open endless mode.
+      if ((e.target as HTMLElement).closest('.logo')) {
+        const now = performance.now();
+        this.logoTaps = this.logoTaps.filter((t) => now - t < 3000);
+        this.logoTaps.push(now);
+        if (this.logoTaps.length >= 7) {
+          this.logoTaps = [];
+          this.onAction('testEndless', 0);
+        }
+        return;
+      }
       const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
       if (!btn || btn.hasAttribute('disabled')) return;
       this.onAction(btn.dataset.action!, Number(btn.dataset.arg ?? 0));
