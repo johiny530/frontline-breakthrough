@@ -48,6 +48,7 @@ export class Game {
       this.onAction(a, arg);
     });
     this.makeSoundToggle(ui);
+    this.makeLangToggle(ui);
     // Keyboard shortcuts on overlays: 1/2/3 pick a perk card, Enter presses the main button.
     window.addEventListener('keydown', (e) => {
       if (this.mode === 'perk' && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) {
@@ -64,6 +65,26 @@ export class Game {
   }
 
   private renderSound: (() => void) | null = null;
+
+  /** Bottom-left 中/EN switch, shown on every menu screen (the pause button takes its place in play). */
+  private makeLangToggle(ui: HTMLElement): void {
+    const btn = document.createElement('button');
+    btn.className = 'icon-btn btn-lang';
+    const render = () => {
+      btn.innerHTML = `${ICONS.globe}<span class="lang-pair"><b class="${lang === 'zh' ? 'on' : ''}">中</b>`
+        + `<b class="${lang === 'en' ? 'on' : ''}">EN</b></span>`;
+      btn.setAttribute('aria-label', t('Switch to English', '切換成中文'));
+    };
+    btn.addEventListener('click', () => {
+      this.audio.click();
+      setLang(lang === 'zh' ? 'en' : 'zh');
+      render();
+      this.renderSound?.();
+      this.screens.refresh();
+    });
+    render();
+    ui.appendChild(btn);
+  }
 
   private makeSoundToggle(ui: HTMLElement): void {
     const btn = document.createElement('button');
@@ -279,10 +300,11 @@ export class Game {
     const run = this.run!;
     this.mode = 'perk';
     this.offer = run.offer();
-    const title = run.sectorsCleared === 0
-      ? t(`出擊前補給（還有 ${run.pendingPicks} 次）`, `Pre-deployment supplies (${run.pendingPicks} left)`)
+    const picks = run.pendingPicks;
+    const title = () => run.sectorsCleared === 0
+      ? t(`出擊前補給（還有 ${picks} 次）`, `Pre-deployment supplies (${picks} left)`)
       : run.pendingPicks > 1
-        ? t(`擊敗 Boss！選擇強化（還有 ${run.pendingPicks} 次）`, `Boss down! Choose a perk (${run.pendingPicks} left)`)
+        ? t(`擊敗 Boss！選擇強化（還有 ${picks} 次）`, `Boss down! Choose a perk (${picks} left)`)
         : t('選擇強化', 'Choose a perk');
     this.screens.perks(run, this.offer, title);
   }
@@ -371,11 +393,6 @@ export class Game {
         }
         break;
       case 'menu': this.abandonRun(); this.showMenu(); break;
-      case 'lang':
-        setLang(lang === 'zh' ? 'en' : 'zh');
-        this.renderSound?.();
-        this.showMenu();
-        break;
       case 'resume':
         this.mode = 'playing';
         this.screens.hide();

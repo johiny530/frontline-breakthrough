@@ -56,6 +56,7 @@ export class Hud {
 
   show(visible: boolean): void {
     this.el.classList.toggle('hidden', !visible);
+    document.body.classList.toggle('in-play', visible); // hides the language switch
   }
 
   /** Call when a stage starts. `code` overrides the mission tag (endless sectors). */

@@ -6,7 +6,7 @@ https://johiny530.github.io/frontline-breakthrough/
 
 電腦和手機的瀏覽器都能玩，不用下載安裝。
 
-遊戲有中文和英文兩種語言，主選單最下面可以切換。*English is available: tap "English" at the bottom of the main menu.*
+遊戲有中文和英文兩種語言，點左下角的「中 / EN」按鈕就能切換。*English is available: tap "中 / EN" at the bottom left.*
 
 <img src="docs/screenshot.jpg" alt="遊戲畫面：上千人的部隊衝向殭屍群" width="320">
 
@@ -65,7 +65,7 @@ https://johiny530.github.io/frontline-breakthrough/
 
 ## English
 
-**Play:** https://johiny530.github.io/frontline-breakthrough/ (switch the language with the button at the bottom of the main menu)
+**Play:** https://johiny530.github.io/frontline-breakthrough/ (switch the language with the "中 / EN" button at the bottom left)
 
 Lead your squad down a zombie-infested desert highway. Your soldiers fire on their own; you only steer.
 

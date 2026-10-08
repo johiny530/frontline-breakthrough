@@ -41,6 +41,8 @@ export class Screens {
   private el = document.createElement('div');
   private logoTaps = 0;
   private lastLogoTap = -Infinity;
+  /** Re-renders the current screen, e.g. after the language changes. */
+  private redraw: (() => void) | null = null;
 
   constructor(parent: HTMLElement, private onAction: Handler) {
     this.el.className = 'screen hidden';
@@ -67,6 +69,11 @@ export class Screens {
 
   hide(): void {
     this.el.classList.add('hidden');
+    this.redraw = null;
+  }
+
+  refresh(): void {
+    this.redraw?.();
   }
 
   private show(html: string, variant: string): void {
@@ -75,6 +82,7 @@ export class Screens {
   }
 
   loading(done: number, total: number): void {
+    this.redraw = () => this.loading(done, total);
     const pct = Math.round((done / Math.max(1, total)) * 100);
     this.show(`<div class="menu">
       <header class="brand">${logo()}</header>
@@ -86,6 +94,7 @@ export class Screens {
   }
 
   menu(levels: LevelDef[], save: SaveData): void {
+    this.redraw = () => this.menu(levels, save);
     const total = save.best.reduce((a, b) => a + b, 0);
     const items = levels.map((lv, i) => {
       const locked = i >= save.unlocked;
@@ -115,8 +124,7 @@ export class Screens {
       ${this.endlessCard(save)}
       <footer class="menu-foot">
         <div class="merit"><span>${t('戰功總計', 'Total merit')}</span><b>${total}</b></div>
-        <p class="keys"><kbd>←</kbd><kbd>→</kbd> ${t('或拖曳移動', 'or drag to steer')}　<kbd>Esc</kbd> ${t('暫停', 'pause')}
-        <button class="lang-btn" data-action="lang" aria-label="${t('Switch to English', '切換成中文')}">${t('English', '中文')}</button></p>
+        <p class="keys"><kbd>←</kbd><kbd>→</kbd> ${t('或拖曳移動', 'or drag to steer')}　<kbd>Esc</kbd> ${t('暫停', 'pause')}</p>
       </footer>
     </div>`, 'menu');
   }
@@ -142,6 +150,7 @@ export class Screens {
 
   /** `confirmReset` shows the second, red step of the reset button. */
   shop(save: SaveData, confirmReset = false): void {
+    this.redraw = () => this.shop(save, confirmReset);
     const rows = META_UPGRADES.map((u, i) => {
       const lv = save.meta[u.id] ?? 0;
       const cost = metaCost(u, lv);
@@ -167,7 +176,8 @@ export class Screens {
   }
 
   /** Between sectors: pick one of three perk cards. */
-  perks(run: EndlessRun, offer: PerkDef[], title: string): void {
+  perks(run: EndlessRun, offer: PerkDef[], title: () => string): void {
+    this.redraw = () => this.perks(run, offer, title);
     const cards = offer.map((p, i) => {
       const lv = run.level(p);
       return `<button class="perk r-${p.rarity}" data-action="perk" data-arg="${i}">
@@ -179,13 +189,14 @@ export class Screens {
     }).join('');
     this.show(`<div class="perk-select">
       <p class="eyebrow">${run.sectorsCleared === 0 ? t('出擊準備', 'PRE-DEPLOYMENT') : `${sectorCode(run.sector - 1)} ${t('突破', 'CLEARED')}`} · ${t('兵力', 'ARMY')} ${run.count}</p>
-      <h2 class="perk-title">${title}</h2>
+      <h2 class="perk-title">${title()}</h2>
       <div class="perk-cards">${cards}</div>
       <button class="btn btn-reroll" data-action="reroll" ${run.rerolls > 0 ? '' : 'disabled'}>${ICONS.retry}${t(`重抽（剩 ${run.rerolls} 次）`, `Reroll (${run.rerolls} left)`)}</button>
     </div>`, 'menu');
   }
 
   runOver(run: EndlessRun, earned: number, record: boolean): void {
+    this.redraw = () => this.runOver(run, earned, record);
     this.show(`<div class="sheet lost">
       <div class="stamp">${t('作戰結束', 'RUN OVER')}</div>
       <p class="eyebrow">${t('無限作戰', 'ENDLESS OPS')}</p>
@@ -208,6 +219,7 @@ export class Screens {
   }
 
   pause(st: Stage, run: EndlessRun | null = null): void {
+    this.redraw = () => this.pause(st, run);
     this.show(`<div class="sheet">
       <p class="eyebrow">${run ? `${t('無限作戰', 'ENDLESS OPS')} · ${sectorCode(run.sector)}` : `${opCode(st.index)} · ${stageName(st.def)}`}</p>
       <h2 class="sheet-title">${t('暫停', 'Paused')}</h2>
@@ -221,6 +233,7 @@ export class Screens {
   }
 
   result(st: Stage, isBest: boolean, hasNext: boolean): void {
+    this.redraw = () => this.result(st, isBest, hasNext);
     const won = st.status === 'won';
     const s = st.score;
     const body = won
