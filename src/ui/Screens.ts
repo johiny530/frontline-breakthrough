@@ -2,7 +2,7 @@ import type { LevelDef } from '../data/levels';
 import { endlessUnlocked, type SaveData } from '../core/Storage';
 import type { EndlessRun } from '../core/endless/EndlessRun';
 import { descOf, META_UPGRADES, metaCost, nameOf, type PerkDef } from '../data/endless';
-import { lang, t } from '../i18n';
+import { t } from '../i18n';
 import type { Stage } from '../core/Stage';
 import { CONFIG } from '../data/config';
 import { ICONS } from './icons';
@@ -33,8 +33,7 @@ const logo = () => `
   <h1 class="logo">
     <span class="logo-top">FRONTLINE</span>
     <span class="logo-band"><span>BREAKTHROUGH</span></span>
-  </h1>
-  ${lang === 'zh' ? '<p class="logo-zh">前線突破</p>' : ''}`;
+  </h1>`;
 
 /** Full-screen overlays: loading, mission select, pause, results. */
 export class Screens {
@@ -117,7 +116,6 @@ export class Screens {
     }).join('');
     this.show(`<div class="menu">
       <header class="brand">
-        <p class="eyebrow">${t('沙漠戰區 · 作戰簡報', 'DESERT SECTOR · BRIEFING')}</p>
         ${logo()}
       </header>
       <ol class="missions">${items}</ol>
