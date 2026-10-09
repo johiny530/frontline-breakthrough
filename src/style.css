@@ -93,7 +93,7 @@ html, body {
 .menu { pointer-events: auto; width: 100%; display: flex; flex-direction: column; gap: 1.8cqw; }
 /* Title pinned near the top, in the same place for every language and the loading screen. */
 .screen-menu > .menu { margin-top: 11.5cqw; margin-bottom: auto; }
-.brand { display: flex; flex-direction: column; align-items: center; gap: 1cqw; text-align: center; }
+.brand { display: flex; flex-direction: column; align-items: center; gap: 1cqw; text-align: center; margin-bottom: 3.6cqw; }
 .logo { margin: 0; display: flex; flex-direction: column; align-items: center; line-height: 0.92; font-weight: 400; }
 .logo-top {
   font-family: var(--f-display);
@@ -145,12 +145,12 @@ html, body {
 .m-new { font-size: 3cqw; font-weight: 700; letter-spacing: 0.25em; padding: 0.8cqw 1.8cqw; border: 0.4cqw solid var(--amber); color: var(--amber); }
 .m-lock { font-size: 5cqw; color: var(--sand); }
 
-.menu-foot { display: flex; flex-direction: column; gap: 1.8cqw; }
+.menu-foot { display: flex; flex-direction: column; gap: 1.2cqw; }
 .merit {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 1.6cqw 3.6cqw;
+  padding: 1.1cqw 3.6cqw;
   border-top: 0.4cqw solid var(--amber);
   background: rgba(23, 25, 15, 0.7);
   font-size: 3.4cqw;
@@ -383,7 +383,7 @@ kbd {
 .endless-head .op { font-size: 7cqw; line-height: 1; }
 .endless-head small { font-size: 3cqw; color: var(--sand); }
 .endless-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 2.4cqw; }
-.endless-actions .btn { padding: 2.4cqw; font-size: 3.8cqw; }
+.endless-actions .btn { padding: 1.8cqw; font-size: 3.8cqw; }
 
 .shop { gap: 2cqw; }
 .shop-head { display: flex; justify-content: space-between; align-items: center; }
